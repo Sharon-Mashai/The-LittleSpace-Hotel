@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type Request } from "express";
 import cors from "cors";
 import { pool } from "./config/db.js";
 import branchesRouter from "./routes/branches.js";
@@ -10,7 +10,14 @@ import paymentsRouter from "./routes/payments.js";
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+
+app.use(
+  express.json({
+    verify: (req: Request, _res, buffer) => {
+      (req as Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer);
+    },
+  }),
+);
 
 app.get("/api/health", (_req, res) => {
   res.status(200).json({

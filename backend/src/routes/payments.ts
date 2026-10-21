@@ -1,14 +1,239 @@
-import { Router } from "express";
-import { randomBytes } from "node:crypto";
+import { Router, type Request } from "express";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { pool } from "../config/db.js";
 
 const router = Router();
-
 const PAYSTACK_URL = "https://api.paystack.co";
 
+type RawBodyRequest = Request & {
+  rawBody?: Buffer;
+};
+
+function getTestSecretKey(): string | null {
+  const secretKey = process.env.PAYSTACK_SECRET_KEY;
+
+  return secretKey?.startsWith("sk_test_") ? secretKey : null;
+}
+
+// POST /api/payments/webhook
+router.post("/webhook", async (req, res) => {
+  const secretKey = getTestSecretKey();
+  const signature = req.header("x-paystack-signature");
+  const rawBody = (req as RawBodyRequest).rawBody;
+
+  if (!secretKey) {
+    res.status(500).json({
+      success: false,
+      message: "Paystack test secret key is not configured.",
+    });
+    return;
+  }
+
+  if (!signature || !rawBody) {
+    res.status(401).json({
+      success: false,
+      message: "Missing webhook signature or request body.",
+    });
+    return;
+  }
+
+  // Paystack signs the exact raw request body using HMAC SHA-512.
+  const expectedSignature = createHmac("sha512", secretKey)
+    .update(rawBody)
+    .digest("hex");
+
+  const receivedBuffer = Buffer.from(signature, "hex");
+  const expectedBuffer = Buffer.from(expectedSignature, "hex");
+
+  if (
+    receivedBuffer.length !== expectedBuffer.length ||
+    !timingSafeEqual(receivedBuffer, expectedBuffer)
+  ) {
+    res.status(401).json({
+      success: false,
+      message: "Invalid Paystack webhook signature.",
+    });
+    return;
+  }
+
+  try {
+    const event = req.body;
+
+    // Only process successful charge notifications.
+    if (
+      event?.event !== "charge.success" ||
+      !event?.data ||
+      typeof event.data.reference !== "string"
+    ) {
+      res.status(200).json({
+        success: true,
+        message: "Webhook received; no action required.",
+      });
+      return;
+    }
+
+    const transaction = event.data;
+    const reference: string = transaction.reference;
+
+    if (
+      !Number.isSafeInteger(transaction.amount) ||
+      transaction.amount <= 0 ||
+      transaction.currency !== "ZAR" ||
+      transaction.status !== "success" ||
+      !Number.isSafeInteger(transaction.id)
+    ) {
+      res.status(200).json({
+        success: true,
+        message: "Webhook received; transaction did not qualify.",
+      });
+      return;
+    }
+
+    const client = await pool.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      // Lock the matching payment and booking while checking their state.
+      const result = await client.query(
+        `SELECT
+           p.id AS payment_id,
+           p.booking_id,
+           p.amount,
+           p.currency,
+           p.status AS payment_status,
+           p.provider_payment_id,
+           b.status AS booking_status
+         FROM payments p
+         JOIN bookings b ON b.id = p.booking_id
+         WHERE p.provider = 'paystack'
+           AND p.provider_data->>'reference' = $1
+         FOR UPDATE OF p, b`,
+        [reference],
+      );
+
+      if (result.rows.length === 0) {
+        await client.query("ROLLBACK");
+
+        // Acknowledge the event so Paystack does not keep retrying
+        // a transaction that does not belong to this application.
+        res.status(200).json({
+          success: true,
+          message: "Webhook received; payment reference not found.",
+        });
+        return;
+      }
+
+      const payment = result.rows[0];
+      const expectedAmount = Math.round(Number(payment.amount) * 100);
+
+      // Never confirm a booking unless all payment details match.
+      if (
+        !Number.isSafeInteger(expectedAmount) ||
+        transaction.amount !== expectedAmount ||
+        transaction.currency !== payment.currency ||
+        payment.currency !== "ZAR"
+      ) {
+        await client.query("ROLLBACK");
+
+        console.error("Paystack webhook payment details did not match.");
+
+        res.status(200).json({
+          success: true,
+          message: "Webhook received; payment details did not match.",
+        });
+        return;
+      }
+
+      // Repeated successful notifications must not process the
+      // same payment again.
+      if (
+        payment.payment_status === "succeeded" &&
+        payment.booking_status === "confirmed" &&
+        String(payment.provider_payment_id) === String(transaction.id)
+      ) {
+        await client.query("COMMIT");
+
+        res.status(200).json({
+          success: true,
+          message: "Payment was already processed.",
+        });
+        return;
+      }
+
+      // Do not allow a webhook to override a cancelled, rejected,
+      // or otherwise non-pending booking/payment.
+      if (
+        payment.payment_status !== "pending" ||
+        payment.booking_status !== "pending"
+      ) {
+        await client.query("ROLLBACK");
+
+        res.status(200).json({
+          success: true,
+          message: "Webhook received; payment or booking is not pending.",
+        });
+        return;
+      }
+
+      await client.query(
+        `UPDATE payments
+         SET status = 'succeeded',
+             provider_payment_id = $1,
+             paid_at = COALESCE($2::timestamptz, NOW()),
+             provider_data = provider_data || $3::jsonb,
+             updated_at = NOW()
+         WHERE id = $4`,
+        [
+          String(transaction.id),
+          transaction.paid_at ?? null,
+          JSON.stringify({
+            webhookVerified: true,
+            webhookEvent: "charge.success",
+            webhookAmount: transaction.amount,
+            webhookCurrency: transaction.currency,
+          }),
+          payment.payment_id,
+        ],
+      );
+
+      await client.query(
+        `UPDATE bookings
+         SET status = 'confirmed',
+             updated_at = NOW()
+         WHERE id = $1 AND status = 'pending'`,
+        [payment.booking_id],
+      );
+
+      await client.query("COMMIT");
+
+      res.status(200).json({
+        success: true,
+        message: "Payment webhook processed successfully.",
+        bookingId: payment.booking_id,
+        bookingStatus: "confirmed",
+        paymentStatus: "succeeded",
+      });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error("Paystack webhook processing failed:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to process Paystack webhook.",
+    });
+  }
+});
+
+// POST /api/payments/initialize
 router.post("/initialize", async (req, res) => {
   const bookingId = Number(req.body.bookingId);
-  const secretKey = process.env.PAYSTACK_SECRET_KEY;
+  const secretKey = getTestSecretKey();
 
   if (!Number.isSafeInteger(bookingId) || bookingId <= 0) {
     res.status(400).json({
@@ -18,7 +243,7 @@ router.post("/initialize", async (req, res) => {
     return;
   }
 
-  if (!secretKey || !secretKey.startsWith("sk_test_")) {
+  if (!secretKey) {
     res.status(500).json({
       success: false,
       message: "Paystack test secret key is not configured.",
@@ -172,7 +397,7 @@ router.post("/initialize", async (req, res) => {
 // POST /api/payments/verify
 router.post("/verify", async (req, res) => {
   const reference = req.body.reference;
-  const secretKey = process.env.PAYSTACK_SECRET_KEY;
+  const secretKey = getTestSecretKey();
 
   if (
     typeof reference !== "string" ||
@@ -185,7 +410,7 @@ router.post("/verify", async (req, res) => {
     return;
   }
 
-  if (!secretKey || !secretKey.startsWith("sk_test_")) {
+  if (!secretKey) {
     res.status(500).json({
       success: false,
       message: "Paystack test secret key is not configured.",
@@ -194,7 +419,6 @@ router.post("/verify", async (req, res) => {
   }
 
   try {
-    // Verify the transaction directly with Paystack.
     const response = await fetch(
       `${PAYSTACK_URL}/transaction/verify/${encodeURIComponent(reference)}`,
       {
@@ -226,7 +450,6 @@ router.post("/verify", async (req, res) => {
       return;
     }
 
-    // Find our own payment record; never trust an amount from the client.
     const paymentResult = await pool.query(
       `SELECT
          p.id AS payment_id,
@@ -253,7 +476,6 @@ router.post("/verify", async (req, res) => {
     const payment = paymentResult.rows[0];
     const expectedCents = Math.round(Number(payment.amount) * 100);
 
-    // All these values must match our database record.
     if (
       !Number.isSafeInteger(expectedCents) ||
       transaction.amount !== expectedCents ||
@@ -276,7 +498,6 @@ router.post("/verify", async (req, res) => {
       return;
     }
 
-    // Lock both records so repeated verification cannot confirm twice.
     const client = await pool.connect();
 
     try {
