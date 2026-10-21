@@ -1,8 +1,8 @@
-
 import express from "express";
 import cors from "cors";
 import { pool } from "./config/db.js";
-import branchesRouter from "../src/routes/branches.js";
+import branchesRouter from "./routes/branches.js";
+import roomTypesRouter from "./routes/roomTypes.js";
 
 const app = express();
 
@@ -18,9 +18,7 @@ app.get("/api/health", (_req, res) => {
 
 app.get("/api/db-health", async (_req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT NOW() AS database_time"
-    );
+    const result = await pool.query("SELECT NOW() AS database_time");
 
     res.status(200).json({
       success: true,
@@ -38,5 +36,6 @@ app.get("/api/db-health", async (_req, res) => {
 });
 
 app.use("/api/branches", branchesRouter);
+app.use("/api/room-types", roomTypesRouter);
 
 export default app;
