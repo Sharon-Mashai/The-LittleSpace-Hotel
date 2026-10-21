@@ -3,6 +3,7 @@ import cors from "cors";
 import { pool } from "./config/db.js";
 import branchesRouter from "./routes/branches.js";
 import roomTypesRouter from "./routes/roomTypes.js";
+import availabilityRouter from "./routes/availability.js";
 
 const app = express();
 
@@ -37,5 +38,6 @@ app.get("/api/db-health", async (_req, res) => {
 
 app.use("/api/branches", branchesRouter);
 app.use("/api/room-types", roomTypesRouter);
+app.use("/api/availability", availabilityRouter);
 
 export default app;
