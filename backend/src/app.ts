@@ -5,6 +5,7 @@ import branchesRouter from "./routes/branches.js";
 import roomTypesRouter from "./routes/roomTypes.js";
 import availabilityRouter from "./routes/availability.js";
 import bookingsRouter from "./routes/bookings.js";
+import paymentsRouter from "./routes/payments.js";
 
 const app = express();
 
@@ -41,5 +42,6 @@ app.use("/api/branches", branchesRouter);
 app.use("/api/room-types", roomTypesRouter);
 app.use("/api/availability", availabilityRouter);
 app.use("/api/bookings", bookingsRouter);
+app.use("/api/payments", paymentsRouter);
 
 export default app;
