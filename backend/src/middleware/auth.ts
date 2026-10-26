@@ -15,15 +15,21 @@ interface TokenPayload extends JwtPayload {
   role: "guest" | "admin";
 }
 
-export async function authenticateToken(
+async function verifyToken(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction,
+  optional: boolean,
 ): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader) {
+      if (optional) {
+        next();
+        return;
+      }
+
       res.status(401).json({
         success: false,
         message: "Authentication token is required.",
@@ -31,7 +37,15 @@ export async function authenticateToken(
       return;
     }
 
-    const token = authHeader.slice(7);
+    if (!authHeader.startsWith("Bearer ") || !authHeader.slice(7).trim()) {
+      res.status(401).json({
+        success: false,
+        message: "Invalid authorization header.",
+      });
+      return;
+    }
+
+    const token = authHeader.slice(7).trim();
     const secret = process.env.JWT_SECRET;
 
     if (!secret) {
@@ -109,4 +123,20 @@ export async function authenticateToken(
       message: "Authentication failed.",
     });
   }
+}
+
+export async function authenticateToken(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  await verifyToken(req, res, next, false);
+}
+
+export async function optionalAuthenticateToken(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  await verifyToken(req, res, next, true);
 }
