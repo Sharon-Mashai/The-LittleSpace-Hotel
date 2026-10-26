@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -5,104 +6,78 @@ import { pool } from "../config/db.js";
 
 const router = Router();
 
-const SALT_ROUNDS = 12;
-
-function getJwtSecret(): string | null {
-  return process.env.JWT_SECRET || null;
-}
-
-function createToken(
-  user: { id: string | number; role: string },
-  secret: string,
-) {
-  return jwt.sign(
-    {
-      sub: String(user.id),
-      role: user.role,
-    },
-    secret,
-    { expiresIn: "1h" },
-  );
-}
-
-// POST /api/auth/register
-router.post("/register", async (req, res) => {
-  const secret = getJwtSecret();
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
 
   if (!secret) {
-    return res.status(500).json({
-      success: false,
-      message: "Authentication is not configured.",
-    });
+    throw new Error("JWT_SECRET is not configured.");
   }
 
-  const fullName =
-    typeof req.body.fullName === "string" ? req.body.fullName.trim() : "";
+  return secret;
+}
 
-  const email =
-    typeof req.body.email === "string"
-      ? req.body.email.trim().toLowerCase()
-      : "";
-
-  const password =
-    typeof req.body.password === "string" ? req.body.password : "";
-
-  const phone =
-    typeof req.body.phone === "string" ? req.body.phone.trim() : null;
-
-  if (!fullName || !email || !password) {
-    return res.status(400).json({
-      success: false,
-      message: "Full name, email, and password are required.",
-    });
-  }
-
-  if (fullName.length > 150 || email.length > 254) {
-    return res.status(400).json({
-      success: false,
-      message: "Full name or email is too long.",
-    });
-  }
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({
-      success: false,
-      message: "Please provide a valid email address.",
-    });
-  }
-
-  if (password.length < 8 || Buffer.byteLength(password, "utf8") > 72) {
-    return res.status(400).json({
-      success: false,
-      message:
-        "Password must be at least 8 characters and no more than 72 bytes.",
-    });
-  }
-
+// Register a new guest account
+router.post("/register", async (req, res) => {
   try {
-    const existingUser = await pool.query(
-      "SELECT id FROM users WHERE LOWER(email) = $1 LIMIT 1",
-      [email],
-    );
+    const { fullName, email, password, phone } = req.body;
 
-    if (existingUser.rows.length > 0) {
-      return res.status(409).json({
+    if (
+      typeof fullName !== "string" ||
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      !fullName.trim() ||
+      !email.trim() ||
+      !password
+    ) {
+      return res.status(400).json({
         success: false,
-        message: "An account with this email already exists.",
+        message: "Full name, email and password are required.",
       });
     }
 
-    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    if (password.length < 8 || Buffer.byteLength(password, "utf8") > 72) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters long.",
+      });
+    }
+
+    if (
+      phone !== undefined &&
+      phone !== null &&
+      (typeof phone !== "string" || !phone.trim())
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone must be a non-empty string when provided.",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPhone =
+      typeof phone === "string" ? phone.trim() : null;
+
+    const passwordHash = await bcrypt.hash(password, 12);
 
     const result = await pool.query(
-      `INSERT INTO users (full_name, email, password_hash, role, phone)
-       VALUES ($1, $2, $3, 'guest', $4)
+      `INSERT INTO users (full_name, email, password_hash, phone, role)
+       VALUES ($1, $2, $3, $4, 'guest')
        RETURNING id, full_name, email, role, phone, created_at`,
-      [fullName, email, passwordHash, phone || null],
+      [
+        fullName.trim(),
+        normalizedEmail,
+        passwordHash,
+        normalizedPhone,
+      ],
     );
 
     const user = result.rows[0];
-    const token = createToken(user, secret);
+
+    const token = jwt.sign(
+      { sub: String(user.id), role: user.role },
+      getJwtSecret(),
+      { expiresIn: "1h" },
+    );
 
     return res.status(201).json({
       success: true,
@@ -110,7 +85,7 @@ router.post("/register", async (req, res) => {
       token,
       user,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     if (
       typeof error === "object" &&
       error !== null &&
@@ -123,48 +98,39 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    console.error("Failed to register user:", error);
+    console.error("Registration failed:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Unable to create your account.",
+      message: "Registration failed.",
     });
   }
 });
 
-// POST /api/auth/login
+// Log in to an existing account
 router.post("/login", async (req, res) => {
-  const secret = getJwtSecret();
-
-  if (!secret) {
-    return res.status(500).json({
-      success: false,
-      message: "Authentication is not configured.",
-    });
-  }
-
-  const email =
-    typeof req.body.email === "string"
-      ? req.body.email.trim().toLowerCase()
-      : "";
-
-  const password =
-    typeof req.body.password === "string" ? req.body.password : "";
-
-  if (!email || !password) {
-    return res.status(400).json({
-      success: false,
-      message: "Email and password are required.",
-    });
-  }
-
   try {
+    const { email, password } = req.body;
+
+    if (
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      !email.trim() ||
+      !password
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required.",
+      });
+    }
+
     const result = await pool.query(
-      `SELECT id, full_name, email, password_hash, role, phone, is_active
+      `SELECT id, full_name, email, password_hash, role, phone,
+              is_active, created_at
        FROM users
-       WHERE LOWER(email) = $1
+       WHERE LOWER(email) = LOWER($1)
        LIMIT 1`,
-      [email],
+      [email.trim()],
     );
 
     if (result.rows.length === 0) {
@@ -179,11 +145,14 @@ router.post("/login", async (req, res) => {
     if (!user.is_active || !user.password_hash) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password.",
+        message: "This account cannot log in with these credentials.",
       });
     }
 
-    const passwordMatches = await bcrypt.compare(password, user.password_hash);
+    const passwordMatches = await bcrypt.compare(
+      password,
+      user.password_hash,
+    );
 
     if (!passwordMatches) {
       return res.status(401).json({
@@ -192,7 +161,11 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    const token = createToken(user, secret);
+    const token = jwt.sign(
+      { sub: String(user.id), role: user.role },
+      getJwtSecret(),
+      { expiresIn: "1h" },
+    );
 
     return res.status(200).json({
       success: true,
@@ -204,14 +177,15 @@ router.post("/login", async (req, res) => {
         email: user.email,
         role: user.role,
         phone: user.phone,
+        created_at: user.created_at,
       },
     });
   } catch (error) {
-    console.error("Failed to log in user:", error);
+    console.error("Login failed:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Unable to log in.",
+      message: "Login failed.",
     });
   }
 });
