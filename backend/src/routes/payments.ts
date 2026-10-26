@@ -37,7 +37,6 @@ router.post("/webhook", async (req, res) => {
     return;
   }
 
-  // Paystack signs the exact raw request body using HMAC SHA-512.
   const expectedSignature = createHmac("sha512", secretKey)
     .update(rawBody)
     .digest("hex");
@@ -59,7 +58,6 @@ router.post("/webhook", async (req, res) => {
   try {
     const event = req.body;
 
-    // Only process successful charge notifications.
     if (
       event?.event !== "charge.success" ||
       !event?.data ||
@@ -94,7 +92,6 @@ router.post("/webhook", async (req, res) => {
     try {
       await client.query("BEGIN");
 
-      // Lock the matching payment and booking while checking their state.
       const result = await client.query(
         `SELECT
            p.id AS payment_id,
@@ -115,8 +112,6 @@ router.post("/webhook", async (req, res) => {
       if (result.rows.length === 0) {
         await client.query("ROLLBACK");
 
-        // Acknowledge the event so Paystack does not keep retrying
-        // a transaction that does not belong to this application.
         res.status(200).json({
           success: true,
           message: "Webhook received; payment reference not found.",
@@ -127,7 +122,6 @@ router.post("/webhook", async (req, res) => {
       const payment = result.rows[0];
       const expectedAmount = Math.round(Number(payment.amount) * 100);
 
-      // Never confirm a booking unless all payment details match.
       if (
         !Number.isSafeInteger(expectedAmount) ||
         transaction.amount !== expectedAmount ||
@@ -145,8 +139,6 @@ router.post("/webhook", async (req, res) => {
         return;
       }
 
-      // Repeated successful notifications must not process the
-      // same payment again.
       if (
         payment.payment_status === "succeeded" &&
         payment.booking_status === "confirmed" &&
@@ -157,12 +149,13 @@ router.post("/webhook", async (req, res) => {
         res.status(200).json({
           success: true,
           message: "Payment was already processed.",
+          bookingId: payment.booking_id,
+          bookingStatus: "confirmed",
+          paymentStatus: "succeeded",
         });
         return;
       }
 
-      // Do not allow a webhook to override a cancelled, rejected,
-      // or otherwise non-pending booking/payment.
       if (
         payment.payment_status !== "pending" ||
         payment.booking_status !== "pending"
@@ -215,7 +208,9 @@ router.post("/webhook", async (req, res) => {
         paymentStatus: "succeeded",
       });
     } catch (error) {
-      await client.query("ROLLBACK");
+      await client.query("ROLLBACK").catch((rollbackError) => {
+        console.error("Webhook rollback failed:", rollbackError);
+      });
       throw error;
     } finally {
       client.release();
@@ -223,10 +218,12 @@ router.post("/webhook", async (req, res) => {
   } catch (error) {
     console.error("Paystack webhook processing failed:", error);
 
-    res.status(500).json({
-      success: false,
-      message: "Unable to process Paystack webhook.",
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: "Unable to process Paystack webhook.",
+      });
+    }
   }
 });
 
@@ -554,6 +551,7 @@ router.post("/verify", async (req, res) => {
           message: "Payment was already verified.",
           bookingId: current.booking_id,
           bookingStatus: "confirmed",
+          paymentStatus: "succeeded",
         });
         return;
       }
@@ -610,7 +608,9 @@ router.post("/verify", async (req, res) => {
         paymentStatus: "succeeded",
       });
     } catch (error) {
-      await client.query("ROLLBACK");
+      await client.query("ROLLBACK").catch((rollbackError) => {
+        console.error("Payment verification rollback failed:", rollbackError);
+      });
       throw error;
     } finally {
       client.release();
@@ -618,10 +618,12 @@ router.post("/verify", async (req, res) => {
   } catch (error) {
     console.error("Payment verification failed:", error);
 
-    res.status(500).json({
-      success: false,
-      message: "Unable to verify payment.",
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: "Unable to verify payment.",
+      });
+    }
   }
 });
 
