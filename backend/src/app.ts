@@ -6,6 +6,7 @@ import roomTypesRouter from "./routes/roomTypes.js";
 import availabilityRouter from "./routes/availability.js";
 import bookingsRouter from "./routes/bookings.js";
 import paymentsRouter from "./routes/payments.js";
+import authRouter from "./routes/auth.js";
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.get("/api/db-health", async (_req, res) => {
   }
 });
 
+app.use("/api/auth", authRouter);
 app.use("/api/branches", branchesRouter);
 app.use("/api/room-types", roomTypesRouter);
 app.use("/api/availability", availabilityRouter);
