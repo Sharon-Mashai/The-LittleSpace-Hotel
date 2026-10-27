@@ -9,6 +9,7 @@ import paymentsRouter from "./guest/routes/payments.js";
 import authRouter from "./guest/routes/auth.js";
 import adminAuthRouter from "./admin/routes/auth.js";
 import adminBookingsRouter from "./admin/routes/bookings.js";
+import adminBranchesRouter from "./admin/routes/branches.js";
 
 const app = express();
 
@@ -48,14 +49,18 @@ app.get("/api/db-health", async (_req, res) => {
   }
 });
 
+// Guest routes
 app.use("/api/auth", authRouter);
-app.use("/api/admin/auth", adminAuthRouter);
 app.use("/api/branches", branchesRouter);
 app.use("/api/room-types", roomTypesRouter);
 app.use("/api/availability", availabilityRouter);
 app.use("/api/bookings", bookingsRouter);
-app.use("/api/admin/bookings", adminBookingsRouter);
 app.use("/api/payments", paymentsRouter);
+
+// Admin routes
+app.use("/api/admin/auth", adminAuthRouter);
+app.use("/api/admin/branches", adminBranchesRouter);
+app.use("/api/admin/bookings", adminBookingsRouter);
 
 
 export default app;
