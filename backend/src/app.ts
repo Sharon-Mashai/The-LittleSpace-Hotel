@@ -1,12 +1,14 @@
 import express, { type Request } from "express";
 import cors from "cors";
 import { pool } from "./config/db.js";
-import branchesRouter from "./routes/branches.js";
-import roomTypesRouter from "./routes/roomTypes.js";
-import availabilityRouter from "./routes/availability.js";
-import bookingsRouter from "./routes/bookings.js";
-import paymentsRouter from "./routes/payments.js";
-import authRouter from "./routes/auth.js";
+import branchesRouter from "./guest/routes/branches.js";
+import roomTypesRouter from "./guest/routes/roomTypes.js";
+import availabilityRouter from "./guest/routes/availability.js";
+import bookingsRouter from "./guest/routes/bookings.js";
+import paymentsRouter from "./guest/routes/payments.js";
+import authRouter from "./guest/routes/auth.js";
+import adminAuthRouter from "./admin/routes/auth.js";
+import adminBookingsRouter from "./admin/routes/bookings.js";
 
 const app = express();
 
@@ -47,10 +49,13 @@ app.get("/api/db-health", async (_req, res) => {
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/admin/auth", adminAuthRouter);
 app.use("/api/branches", branchesRouter);
 app.use("/api/room-types", roomTypesRouter);
 app.use("/api/availability", availabilityRouter);
 app.use("/api/bookings", bookingsRouter);
+app.use("/api/admin/bookings", adminBookingsRouter);
 app.use("/api/payments", paymentsRouter);
+
 
 export default app;

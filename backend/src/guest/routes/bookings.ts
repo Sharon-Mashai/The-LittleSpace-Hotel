@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { randomBytes } from "node:crypto";
-import { pool } from "../config/db.js";
-import { optionalAuthenticateToken, type AuthenticatedRequest,} from "../middleware/auth.js";
+import { pool } from "../../config/db.js";
+import { optionalAuthenticateGuest, type AuthenticatedGuestRequest,} from "../middleware/auth.js";
 
 const router = Router();
 
@@ -20,8 +20,8 @@ function isValidDate(value: unknown): value is string {
 // POST /api/bookings
 router.post(
   "/",
-  optionalAuthenticateToken,
-  async (req: AuthenticatedRequest, res) => {
+  optionalAuthenticateGuest,
+  async (req: AuthenticatedGuestRequest, res) => {
     const {
       branchId,
       roomTypeId,

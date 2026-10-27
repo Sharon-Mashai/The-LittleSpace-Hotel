@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { pool } from "../config/db.js";
+import { pool } from "../../config/db.js";
 
 const router = Router();
 
@@ -91,7 +91,7 @@ router.get("/", async (req, res) => {
     res.status(200).json({
       success: true,
       count: result.rows.length,
-      search: {  branchId,  checkIn,checkOut,  adults, children,},
+      search: {branchId, checkIn, checkOut, adults, children,},
       data: result.rows,
     });
   } catch (error) {

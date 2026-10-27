@@ -1,8 +1,7 @@
-
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { pool } from "../config/db.js";
+import { pool } from "../../config/db.js";
 
 const router = Router();
 
@@ -54,8 +53,7 @@ router.post("/register", async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedPhone =
-      typeof phone === "string" ? phone.trim() : null;
+    const normalizedPhone = typeof phone === "string" ? phone.trim() : null;
 
     const passwordHash = await bcrypt.hash(password, 12);
 
@@ -63,18 +61,13 @@ router.post("/register", async (req, res) => {
       `INSERT INTO users (full_name, email, password_hash, phone, role)
        VALUES ($1, $2, $3, $4, 'guest')
        RETURNING id, full_name, email, role, phone, created_at`,
-      [
-        fullName.trim(),
-        normalizedEmail,
-        passwordHash,
-        normalizedPhone,
-      ],
+      [fullName.trim(), normalizedEmail, passwordHash, normalizedPhone],
     );
 
     const user = result.rows[0];
 
     const token = jwt.sign(
-      { sub: String(user.id), role: user.role },
+      { sub: String(user.id), role: "guest" },
       getJwtSecret(),
       { expiresIn: "1h" },
     );
@@ -107,7 +100,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Log in to an existing account
+// Log in to an existing guest account
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -142,6 +135,13 @@ router.post("/login", async (req, res) => {
 
     const user = result.rows[0];
 
+    if (user.role !== "guest") {
+      return res.status(403).json({
+        success: false,
+        message: "Please use the appropriate login for your account.",
+      });
+    }
+
     if (!user.is_active || !user.password_hash) {
       return res.status(401).json({
         success: false,
@@ -149,10 +149,7 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    const passwordMatches = await bcrypt.compare(
-      password,
-      user.password_hash,
-    );
+    const passwordMatches = await bcrypt.compare(password, user.password_hash);
 
     if (!passwordMatches) {
       return res.status(401).json({
@@ -162,7 +159,7 @@ router.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { sub: String(user.id), role: user.role },
+      { sub: String(user.id), role: "guest" },
       getJwtSecret(),
       { expiresIn: "1h" },
     );
@@ -181,7 +178,7 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Login failed:", error);
+    console.error("Guest login failed:", error);
 
     return res.status(500).json({
       success: false,
