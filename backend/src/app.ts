@@ -16,6 +16,7 @@ import notificationsRouter from "./guest/routes/notifications.js";
 import profileRouter from "./guest/routes/profile.js";
 import bookingHistoryRouter from "./guest/routes/bookingHistory.js";
 import searchRouter from "./guest/routes/search.js";
+import accommodationPhotosRouter from "./guest/routes/accommodationPhotos.js";
 
 const app = express();
 
@@ -68,6 +69,7 @@ app.use("/api/notifications", notificationsRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/bookings", bookingHistoryRouter);
 app.use("/api/search", searchRouter);
+app.use("/api/accommodations", accommodationPhotosRouter);
 
 // Admin routes
 app.use("/api/admin/auth", adminAuthRouter);
