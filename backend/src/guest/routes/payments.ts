@@ -1,7 +1,11 @@
 import { Router, type Request, type Response } from "express";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { pool } from "../../config/db.js";
-import { optionalAuthenticateGuest, type AuthenticatedGuestRequest,} from "../middleware/auth.js";
+import { sendBookingConfirmationEmail } from "../../config/emailService.js";
+import {
+  optionalAuthenticateGuest,
+  type AuthenticatedGuestRequest,
+} from "../middleware/auth.js";
 
 const router = Router();
 const PAYSTACK_URL = "https://api.paystack.co";
@@ -13,6 +17,18 @@ type RawBodyRequest = Request & {
 type BookingAccessDetails = {
   user_id: string | number | null;
   guest_email: string | null;
+};
+
+type ConfirmationDetails = {
+  guest_full_name: string | null;
+  guest_email: string | null;
+  booking_reference: string;
+  branch_name: string | null;
+  room_name: string | null;
+  check_in: string | Date;
+  check_out: string | Date;
+  total_amount: string | number;
+  currency: string;
 };
 
 function getTestSecretKey(): string | null {
@@ -29,7 +45,6 @@ function authorizeBookingAccess(
   const authReq = req as AuthenticatedGuestRequest;
   const user = authReq.user;
 
-  // Registered bookings must be accessed by their account owner.
   if (booking.user_id !== null) {
     if (!user) {
       res.status(401).json({
@@ -50,7 +65,6 @@ function authorizeBookingAccess(
     return true;
   }
 
-  // A signed-in guest must not fall back to guest-email access.
   if (user) {
     res.status(403).json({
       success: false,
@@ -59,7 +73,6 @@ function authorizeBookingAccess(
     return false;
   }
 
-  // Guest bookings require the contact email used when booking.
   const suppliedEmail =
     typeof req.body?.guestEmail === "string"
       ? req.body.guestEmail.trim().toLowerCase()
@@ -77,6 +90,75 @@ function authorizeBookingAccess(
   }
 
   return true;
+}
+
+function formatBookingDate(value: string | Date): string {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  return String(value).slice(0, 10);
+}
+
+async function sendConfirmationEmailSafely(
+  booking: ConfirmationDetails,
+): Promise<void> {
+  try {
+    if (
+      !booking.guest_full_name ||
+      !booking.guest_email ||
+      !booking.booking_reference ||
+      !booking.branch_name ||
+      !booking.room_name
+    ) {
+      console.error(
+        "Booking was confirmed, but confirmation email details were incomplete.",
+        booking.booking_reference,
+      );
+      return;
+    }
+
+    const checkIn = formatBookingDate(booking.check_in);
+    const checkOut = formatBookingDate(booking.check_out);
+
+    const nights =
+      (Date.parse(`${checkOut}T00:00:00.000Z`) -
+        Date.parse(`${checkIn}T00:00:00.000Z`)) /
+      86_400_000;
+
+    if (!Number.isSafeInteger(nights) || nights <= 0) {
+      console.error(
+        "Booking was confirmed, but its dates were invalid for the confirmation email.",
+        booking.booking_reference,
+      );
+      return;
+    }
+
+    await sendBookingConfirmationEmail({
+      guestName: booking.guest_full_name,
+      guestEmail: booking.guest_email,
+      bookingReference: booking.booking_reference,
+      branchName: booking.branch_name,
+      checkIn,
+      checkOut,
+      roomName: booking.room_name,
+      nights,
+      totalAmount: Number(booking.total_amount).toFixed(2),
+      currency: booking.currency,
+    });
+
+    console.log(
+      "Booking confirmation email sent for:",
+      booking.booking_reference,
+    );
+  } catch (error) {
+    // Email failure must never undo an already-confirmed payment.
+    console.error(
+      "Booking confirmation email failed for:",
+      booking.booking_reference,
+      error,
+    );
+  }
 }
 
 // POST /api/payments/webhook
@@ -164,7 +246,33 @@ router.post("/webhook", async (req, res) => {
            p.currency,
            p.status AS payment_status,
            p.provider_payment_id,
-           b.status AS booking_status
+           b.status AS booking_status,
+           b.guest_full_name,
+           b.guest_email,
+           b.booking_reference,
+           b.check_in,
+           b.check_out,
+           b.total_amount,
+           b.currency AS booking_currency,
+           (
+             SELECT rt.name
+             FROM booking_rooms br
+             JOIN rooms r ON r.id = br.room_id
+             JOIN room_types rt ON rt.id = r.room_type_id
+             WHERE br.booking_id = b.id
+             ORDER BY br.id
+             LIMIT 1
+           ) AS room_name,
+           (
+             SELECT hb.name
+             FROM booking_rooms br
+             JOIN rooms r ON r.id = br.room_id
+             JOIN room_types rt ON rt.id = r.room_type_id
+             JOIN hotel_branches hb ON hb.id = rt.branch_id
+             WHERE br.booking_id = b.id
+             ORDER BY br.id
+             LIMIT 1
+           ) AS branch_name
          FROM payments p
          JOIN bookings b ON b.id = p.booking_id
          WHERE p.provider = 'paystack'
@@ -203,6 +311,7 @@ router.post("/webhook", async (req, res) => {
         return;
       }
 
+      // A repeated successful webhook must not send another email.
       if (
         payment.payment_status === "succeeded" &&
         payment.booking_status === "confirmed" &&
@@ -254,15 +363,39 @@ router.post("/webhook", async (req, res) => {
         ],
       );
 
-      await client.query(
+      const confirmedBooking = await client.query(
         `UPDATE bookings
          SET status = 'confirmed',
              updated_at = NOW()
-         WHERE id = $1 AND status = 'pending'`,
+         WHERE id = $1 AND status = 'pending'
+         RETURNING id`,
         [payment.booking_id],
       );
 
+      if (confirmedBooking.rows.length !== 1) {
+        await client.query("ROLLBACK");
+
+        res.status(200).json({
+          success: true,
+          message: "Booking status changed; no further action was taken.",
+        });
+        return;
+      }
+
       await client.query("COMMIT");
+
+      // The database transaction is complete before sending the email.
+      await sendConfirmationEmailSafely({
+        guest_full_name: payment.guest_full_name,
+        guest_email: payment.guest_email,
+        booking_reference: payment.booking_reference,
+        branch_name: payment.branch_name,
+        room_name: payment.room_name,
+        check_in: payment.check_in,
+        check_out: payment.check_out,
+        total_amount: payment.total_amount,
+        currency: payment.booking_currency,
+      });
 
       res.status(200).json({
         success: true,
@@ -507,7 +640,6 @@ router.post(
     }
 
     try {
-      // Find the payment and authorize access before contacting Paystack.
       const paymentResult = await pool.query(
         `SELECT
            p.id AS payment_id,
@@ -616,7 +748,32 @@ router.post(
              p.status AS payment_status,
              b.status AS booking_status,
              b.user_id,
-             b.guest_email
+             b.guest_email,
+             b.guest_full_name,
+             b.booking_reference,
+             b.check_in,
+             b.check_out,
+             b.total_amount,
+             b.currency AS booking_currency,
+             (
+               SELECT rt.name
+               FROM booking_rooms br
+               JOIN rooms r ON r.id = br.room_id
+               JOIN room_types rt ON rt.id = r.room_type_id
+               WHERE br.booking_id = b.id
+               ORDER BY br.id
+               LIMIT 1
+             ) AS room_name,
+             (
+               SELECT hb.name
+               FROM booking_rooms br
+               JOIN rooms r ON r.id = br.room_id
+               JOIN room_types rt ON rt.id = r.room_type_id
+               JOIN hotel_branches hb ON hb.id = rt.branch_id
+               WHERE br.booking_id = b.id
+               ORDER BY br.id
+               LIMIT 1
+             ) AS branch_name
            FROM payments p
            JOIN bookings b ON b.id = p.booking_id
            WHERE p.id = $1
@@ -636,7 +793,6 @@ router.post(
 
         const current = lockedPayment.rows[0];
 
-        // Recheck authorization against the locked booking record.
         if (!authorizeBookingAccess(req, current, res)) {
           await client.query("ROLLBACK");
           return;
@@ -655,6 +811,7 @@ router.post(
           return;
         }
 
+        // A repeat verification must not send another confirmation email.
         if (
           current.payment_status === "succeeded" &&
           current.booking_status === "confirmed"
@@ -705,15 +862,38 @@ router.post(
           ],
         );
 
-        await client.query(
+        const confirmedBooking = await client.query(
           `UPDATE bookings
            SET status = 'confirmed',
                updated_at = NOW()
-           WHERE id = $1 AND status = 'pending'`,
+           WHERE id = $1 AND status = 'pending'
+           RETURNING id`,
           [current.booking_id],
         );
 
+        if (confirmedBooking.rows.length !== 1) {
+          await client.query("ROLLBACK");
+
+          res.status(409).json({
+            success: false,
+            message: "Booking status changed during verification.",
+          });
+          return;
+        }
+
         await client.query("COMMIT");
+
+        await sendConfirmationEmailSafely({
+          guest_full_name: current.guest_full_name,
+          guest_email: current.guest_email,
+          booking_reference: current.booking_reference,
+          branch_name: current.branch_name,
+          room_name: current.room_name,
+          check_in: current.check_in,
+          check_out: current.check_out,
+          total_amount: current.total_amount,
+          currency: current.booking_currency,
+        });
 
         res.status(200).json({
           success: true,
