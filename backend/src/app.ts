@@ -15,6 +15,7 @@ import reviewsRouter from "./guest/routes/reviews.js";
 import notificationsRouter from "./guest/routes/notifications.js";
 import profileRouter from "./guest/routes/profile.js";
 import bookingHistoryRouter from "./guest/routes/bookingHistory.js";
+import searchRouter from "./guest/routes/search.js";
 
 const app = express();
 
@@ -66,6 +67,7 @@ app.use("/api/reviews", reviewsRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/bookings", bookingHistoryRouter);
+app.use("/api/search", searchRouter);
 
 // Admin routes
 app.use("/api/admin/auth", adminAuthRouter);
