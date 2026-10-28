@@ -10,6 +10,7 @@ import authRouter from "./guest/routes/auth.js";
 import adminAuthRouter from "./admin/routes/auth.js";
 import adminBookingsRouter from "./admin/routes/bookings.js";
 import adminBranchesRouter from "./admin/routes/branches.js";
+import favouritesRouter from "./guest/routes/favourites.js";
 
 const app = express();
 
@@ -56,6 +57,7 @@ app.use("/api/room-types", roomTypesRouter);
 app.use("/api/availability", availabilityRouter);
 app.use("/api/bookings", bookingsRouter);
 app.use("/api/payments", paymentsRouter);
+app.use("/api/favourites", favouritesRouter);
 
 // Admin routes
 app.use("/api/admin/auth", adminAuthRouter);
