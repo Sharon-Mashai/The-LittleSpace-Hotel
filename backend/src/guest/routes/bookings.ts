@@ -1,7 +1,11 @@
+
 import { Router } from "express";
 import { randomBytes } from "node:crypto";
 import { pool } from "../../config/db.js";
-import { optionalAuthenticateGuest, type AuthenticatedGuestRequest,} from "../middleware/auth.js";
+import {
+  optionalAuthenticateGuest,
+  type AuthenticatedGuestRequest,
+} from "../middleware/auth.js";
 
 const router = Router();
 
@@ -13,7 +17,8 @@ function isValidDate(value: unknown): value is string {
   const date = new Date(`${value}T00:00:00.000Z`);
 
   return (
-    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+    !Number.isNaN(date.getTime()) &&
+    date.toISOString().slice(0, 10) === value
   );
 }
 
@@ -36,7 +41,8 @@ router.post(
     } = req.body ?? {};
 
     const validBranchId = Number.isSafeInteger(branchId) && branchId > 0;
-    const validRoomTypeId = Number.isSafeInteger(roomTypeId) && roomTypeId > 0;
+    const validRoomTypeId =
+      Number.isSafeInteger(roomTypeId) && roomTypeId > 0;
     const validAdults = Number.isSafeInteger(adults) && adults > 0;
     const validChildren = Number.isSafeInteger(children) && children >= 0;
 
@@ -58,7 +64,8 @@ router.post(
     const validRequests =
       specialRequests === undefined ||
       specialRequests === null ||
-      (typeof specialRequests === "string" && specialRequests.length <= 2000);
+      (typeof specialRequests === "string" &&
+        specialRequests.length <= 2000);
 
     if (
       !validBranchId ||
@@ -98,10 +105,8 @@ router.post(
         `
           SELECT r.id
           FROM rooms AS r
-          INNER JOIN room_types AS rt
-            ON rt.id = r.room_type_id
-          INNER JOIN hotel_branches AS hb
-            ON hb.id = rt.branch_id
+          INNER JOIN room_types AS rt ON rt.id = r.room_type_id
+          INNER JOIN hotel_branches AS hb ON hb.id = rt.branch_id
           WHERE rt.id = $1
             AND rt.branch_id = $2
             AND rt.is_active = TRUE
@@ -112,8 +117,7 @@ router.post(
             AND NOT EXISTS (
               SELECT 1
               FROM booking_rooms AS br
-              INNER JOIN bookings AS b
-                ON b.id = br.booking_id
+              INNER JOIN bookings AS b ON b.id = br.booking_id
               WHERE br.room_id = r.id
                 AND b.status IN ('pending', 'confirmed')
                 AND b.check_in < $6::date
@@ -139,10 +143,8 @@ router.post(
           `
             SELECT r.id, rt.base_price
             FROM rooms AS r
-            INNER JOIN room_types AS rt
-              ON rt.id = r.room_type_id
-            INNER JOIN hotel_branches AS hb
-              ON hb.id = rt.branch_id
+            INNER JOIN room_types AS rt ON rt.id = r.room_type_id
+            INNER JOIN hotel_branches AS hb ON hb.id = rt.branch_id
             WHERE r.id = $1
               AND rt.id = $2
               AND rt.branch_id = $3
@@ -154,8 +156,7 @@ router.post(
               AND NOT EXISTS (
                 SELECT 1
                 FROM booking_rooms AS br
-                INNER JOIN bookings AS b
-                  ON b.id = br.booking_id
+                INNER JOIN bookings AS b ON b.id = br.booking_id
                 WHERE br.room_id = r.id
                   AND b.status IN ('pending', 'confirmed')
                   AND b.check_in < $7::date
@@ -212,19 +213,8 @@ router.post(
             currency
           )
           VALUES (
-            $1,
-            $2,
-            $3,
-            $4,
-            $5,
-            $6::date,
-            $7::date,
-            $8,
-            $9,
-            'pending',
-            $10,
-            $11::numeric * $12::integer,
-            'ZAR'
+            $1, $2, $3, $4, $5, $6::date, $7::date,
+            $8, $9, 'pending', $10, $11::numeric * $12::integer, 'ZAR'
           )
           RETURNING
             id,
@@ -260,11 +250,7 @@ router.post(
 
       await client.query(
         `
-          INSERT INTO booking_rooms (
-            booking_id,
-            room_id,
-            nightly_price
-          )
+          INSERT INTO booking_rooms (booking_id, room_id, nightly_price)
           VALUES ($1, $2, $3)
         `,
         [booking.id, selectedRoom.id, selectedRoom.base_price],
