@@ -13,6 +13,7 @@ import adminBranchesRouter from "./admin/routes/branches.js";
 import favouritesRouter from "./guest/routes/favourites.js";
 import reviewsRouter from "./guest/routes/reviews.js";
 import notificationsRouter from "./guest/routes/notifications.js";
+import profileRouter from "./guest/routes/profile.js";
 
 const app = express();
 
@@ -62,6 +63,7 @@ app.use("/api/payments", paymentsRouter);
 app.use("/api/favourites", favouritesRouter);
 app.use("/api/reviews", reviewsRouter);
 app.use("/api/notifications", notificationsRouter);
+app.use("/api/profile", profileRouter);
 
 // Admin routes
 app.use("/api/admin/auth", adminAuthRouter);
