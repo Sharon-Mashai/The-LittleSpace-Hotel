@@ -19,6 +19,7 @@ import searchRouter from "./guest/routes/search.js";
 import accommodationPhotosRouter from "./guest/routes/accommodationPhotos.js";
 import accommodationDetailsRouter from "./guest/routes/accommodationDetails.js";
 import adminRoomTypesRouter from "./admin/routes/roomTypes.js";
+import adminDashboardRouter from "./admin/routes/dashboard.js";
 
 const app = express();
 
@@ -79,6 +80,7 @@ app.use("/api/admin/auth", adminAuthRouter);
 app.use("/api/admin/branches", adminBranchesRouter);
 app.use("/api/admin/bookings", adminBookingsRouter);
 app.use("/api/admin/room-types", adminRoomTypesRouter);
+app.use("/api/admin/dashboard", adminDashboardRouter);
 
 
 export default app;
