@@ -1,3 +1,52 @@
+
+/* =========================================
+   AUTHENTICATION TEXT ALIGNMENT
+========================================= */
+
+.auth-card {
+  text-align: left;
+}
+
+.auth-card > .eyebrow,
+.auth-card > h1,
+.auth-card > p {
+  text-align: left;
+}
+
+.auth-form {
+  text-align: left;
+}
+
+.auth-form > label:not(.filter-option) {
+  text-align: left;
+}
+
+.auth-links {
+  justify-content: flex-start;
+}
+
+.auth-switch {
+  text-align: left;
+}
+
+.auth-guest {
+  text-align: left;
+}
+
+.account-page-heading {
+  text-align: center;
+}
+
+.account-page,
+.search-page,
+.stays-section {
+  background-color: var(--page-bg);
+}
+
+/* =========================================
+   GLOBAL STYLES
+========================================= */
+
 :root {
   font-family: Arial, Helvetica, sans-serif;
   color: #28251f;
@@ -63,15 +112,24 @@ img {
   background: var(--page-bg);
 }
 
+/* =========================================
+   SHARED NAVIGATION
+========================================= */
+
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
   min-height: 86px;
-  padding: 16px 6%;
+  padding: 16px 18%;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  background: var(--page-bg);
+  background: rgba(251, 249, 245, 0.97);
   border-bottom: 1px solid rgba(100, 85, 65, 0.1);
+  backdrop-filter: blur(12px);
 }
 
 .brand {
@@ -83,6 +141,7 @@ img {
   border: 0;
   background: transparent;
   color: var(--text);
+  text-decoration: none;
 }
 
 .brand-name {
@@ -109,6 +168,23 @@ img {
   background: transparent;
   color: var(--text);
   font-size: 14px;
+}
+
+.main-nav a {
+  padding: 10px 0;
+  color: var(--text);
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.main-nav a:hover,
+.main-nav a.active {
+  color: var(--accent);
+}
+
+.main-nav a.active {
+  font-weight: 700;
 }
 
 .main-nav button:hover,
@@ -140,11 +216,17 @@ img {
   background: var(--accent);
 }
 
+/* =========================================
+   HOMEPAGE HERO
+========================================= */
+
 .hero {
   position: relative;
   display: flex;
   align-items: center;
-  min-height: 500px;
+  height: 75vh;
+  min-height: 650px;
+  max-height: 850px;
   overflow: hidden;
   background: #6b6256;
 }
@@ -174,8 +256,7 @@ img {
 .hero-content {
   position: relative;
   z-index: 1;
-  width: min(680px, 100%);
-  padding: 80px 8%;
+  padding: 180px 18%;
   color: #fff;
 }
 
@@ -217,6 +298,76 @@ img {
   padding: 15px 23px;
   font-size: 14px;
 }
+
+/* =========================================
+   HOMEPAGE SEARCH BANNER
+========================================= */
+
+.hero-search-wrapper {
+  position: relative;
+  margin-bottom: 110px;
+}
+
+.hero-search-banner {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 50%);
+  width: min(1100px, calc(100% - 48px));
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 35px rgba(40, 37, 31, 0.12);
+}
+
+.search-banner-heading {
+  margin-bottom: 18px;
+}
+
+.search-banner-heading h2 {
+  margin: 5px 0 0;
+}
+
+.search-banner-fields {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 0.65fr 0.65fr 0.65fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.search-field input {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.search-banner-button {
+  height: 44px;
+  white-space: nowrap;
+}
+
+/* =========================================
+   DESTINATION SECTION
+   Original desktop spacing preserved
+========================================= */
 
 .stays-section {
   max-width: 1440px;
@@ -316,7 +467,9 @@ img {
   font-weight: 700;
 }
 
-/* Search results page */
+/* =========================================
+   SEARCH RESULTS PAGE
+========================================= */
 
 .search-page {
   max-width: 1600px;
@@ -672,16 +825,20 @@ img {
   line-height: 1.7;
 }
 
-/* Footer */
+/* =========================================
+   FOOTER
+========================================= */
 
 .site-footer {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 30px 6%;
+  justify-content: center;
+  gap: 10px;
+  padding: 30px 18%;
   border-top: 1px solid var(--border);
   background: #f4f0e9;
+  text-align: center;
 }
 
 .footer-brand {
@@ -695,9 +852,300 @@ img {
   font-size: 12px;
 }
 
-/* Responsive layout */
+/* =========================================
+   SHARED ACCOUNT PAGE LAYOUT
+========================================= */
+
+.account-page {
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  padding: 75px 6%;
+}
+
+.account-page-heading {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto 5px;
+  text-align: center;
+}
+
+.account-page-heading h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(34px, 4vw, 48px);
+  font-weight: 400;
+  letter-spacing: -1px;
+}
+
+.account-page-heading > p:not(.eyebrow) {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+/* =========================================
+   SIGN IN, REGISTER, PROFILE AND SETTINGS
+========================================= */
+
+.auth-card {
+  width: 100%;
+  max-width: 510px;
+  padding: 42px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-bg);
+  box-shadow: 0 12px 35px rgba(40, 30, 20, 0.055);
+  text-align: left;
+}
+
+.auth-card > .eyebrow {
+  margin-bottom: 12px;
+}
+
+.auth-card > h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(30px, 4vw, 39px);
+  font-weight: 400;
+  letter-spacing: -1px;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.auth-card > p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+  text-align: left;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 27px;
+  text-align: left;
+}
+
+.auth-form > label:not(.filter-option) {
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.auth-form > input {
+  width: 100%;
+  min-height: 49px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text);
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-form > input::placeholder {
+  color: #aaa197;
+}
+
+.auth-form > input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(112, 91, 71, 0.1);
+}
+
+.auth-form .primary-button {
+  width: 100%;
+  min-height: 49px;
+  margin-top: 14px;
+}
+
+.auth-form h2 {
+  margin: 23px 0 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.auth-form h2:first-child {
+  margin-top: 0;
+}
+
+.auth-links {
+  display: flex;
+  justify-content: flex-start;
+  margin: 5px 0;
+}
+
+.auth-links a,
+.auth-switch a {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-links a:hover,
+.auth-switch a:hover {
+  color: var(--accent-dark);
+  text-decoration: underline;
+}
+
+.auth-switch {
+  margin: 25px 0 0;
+  text-align: left;
+}
+
+.auth-guest {
+  margin: 18px 0 0;
+  padding-top: 17px;
+  border-top: 1px solid var(--border);
+  font-size: 12px !important;
+  text-align: left;
+}
+
+/* =========================================
+   SETTINGS CHECKBOXES
+========================================= */
+
+.auth-form .filter-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 3px 0;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.auth-form .filter-option input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--accent-dark);
+}
+
+/* =========================================
+   EMPTY STATES AND HOTEL DETAILS
+========================================= */
+
+.empty-state {
+  width: 100%;
+  max-width: 760px;
+  padding: 55px 45px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-bg);
+  box-shadow: 0 10px 30px rgba(40, 30, 20, 0.04);
+  text-align: center;
+}
+
+.empty-state h1,
+.empty-state h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.empty-state h1 {
+  font-size: clamp(32px, 4vw, 43px);
+}
+
+.empty-state h2 {
+  margin-top: 12px;
+  font-size: 27px;
+}
+
+.empty-state > p:not(.eyebrow) {
+  max-width: 540px;
+  margin: 16px auto 25px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.empty-state .primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 47px;
+  margin-top: 10px;
+  padding: 14px 23px;
+  text-decoration: none;
+}
+
+/* =========================================
+   BOOKING AND PAYMENT CONFIRMATION
+========================================= */
+
+.confirmation-state {
+  max-width: 720px;
+  padding: 65px 50px;
+}
+
+.confirmation-state > .eyebrow {
+  margin-bottom: 17px;
+}
+
+.confirmation-state h1 {
+  margin-bottom: 20px;
+}
+
+.confirmation-state h2 {
+  color: var(--accent-dark);
+}
+
+.confirmation-state strong {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* =========================================
+   SHARED BUTTON AND LINK STYLING
+========================================= */
+
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 47px;
+  padding: 13px 22px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent-dark);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.primary-button:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* =========================================
+   RESPONSIVE LAYOUT
+========================================= */
 
 @media (max-width: 1050px) {
+  .site-header {
+    padding: 16px 8%;
+  }
+
   .search-layout {
     grid-template-columns: 205px minmax(0, 1fr);
     gap: 22px;
@@ -709,6 +1157,20 @@ img {
 
   .home-stay-card > img {
     height: 200px;
+  }
+}
+
+@media (max-width: 900px) {
+  .search-banner-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .destination-field {
+    grid-column: span 3;
+  }
+
+  .search-banner-button {
+    grid-column: span 3;
   }
 }
 
@@ -732,7 +1194,8 @@ img {
     gap: 14px;
   }
 
-  .main-nav button {
+  .main-nav button,
+  .main-nav a {
     font-size: 12px;
   }
 
@@ -742,6 +1205,7 @@ img {
   }
 
   .hero {
+    height: 430px;
     min-height: 430px;
   }
 
@@ -753,6 +1217,7 @@ img {
     background: rgba(24, 23, 20, 0.48);
   }
 
+  /* Original destination section responsive spacing */
   .stays-section {
     padding: 52px 5%;
   }
@@ -804,6 +1269,48 @@ img {
   .site-footer {
     padding: 25px 5%;
   }
+
+  .account-page {
+    min-height: 65vh;
+    padding: 50px 5%;
+  }
+
+  .auth-card {
+    padding: 32px 25px;
+  }
+
+  .empty-state {
+    padding: 40px 25px;
+  }
+
+  .confirmation-state {
+    padding: 45px 25px;
+  }
+}
+
+@media (max-width: 600px) {
+  .hero {
+    height: 72vh;
+    min-height: 600px;
+  }
+
+  .hero-search-wrapper {
+    margin-bottom: 250px;
+  }
+
+  .hero-search-banner {
+    width: calc(100% - 28px);
+    padding: 18px;
+  }
+
+  .search-banner-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .destination-field,
+  .search-banner-button {
+    grid-column: span 2;
+  }
 }
 
 @media (max-width: 480px) {
@@ -822,12 +1329,12 @@ img {
     border-top: 1px solid var(--border);
   }
 
-  .header-cta {
+  .main-nav a {
     font-size: 12px;
   }
 
-  .hero {
-    min-height: 390px;
+  .header-cta {
+    font-size: 12px;
   }
 
   .hero-content h1 {
@@ -874,7 +1381,26 @@ img {
   }
 
   .site-footer {
-    align-items: flex-start;
-    flex-direction: column;
+    padding: 30px 5%;
+  }
+
+  .account-page {
+    padding: 38px 5%;
+  }
+
+  .auth-card {
+    padding: 28px 20px;
+  }
+
+  .auth-card > h1 {
+    font-size: 31px;
+  }
+
+  .empty-state {
+    padding: 35px 20px;
+  }
+
+  .confirmation-state h1 {
+    font-size: 32px;
   }
 }
