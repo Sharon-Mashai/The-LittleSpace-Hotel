@@ -4,7 +4,7 @@ function SignInPage() {
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    // Authentication will be connected to the backend later.
+  
   }
 
   return (

@@ -3,8 +3,6 @@ import { Link } from "react-router-dom";
 function ForgotPasswordPage() {
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    // Password reset will be connected to the backend later.
   }
 
   return (

@@ -3,7 +3,7 @@ function ProfilePage() {
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    // Profile updates will be connected to the backend later.
+   
   }
 
   return (

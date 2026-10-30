@@ -2,7 +2,6 @@ function SettingsPage() {
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    // Settings will be saved through the backend later.
   }
 
   return (
