@@ -472,9 +472,10 @@ img {
 ========================================= */
 
 .search-page {
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 50px 5% 80px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 50px 18% 80px;
 }
 
 .search-heading {
@@ -1158,6 +1159,9 @@ img {
   .home-stay-card > img {
     height: 200px;
   }
+ .search-page {
+    padding: 50px 8% 70px;
+  }
 }
 
 @media (max-width: 900px) {
@@ -1217,7 +1221,6 @@ img {
     background: rgba(24, 23, 20, 0.48);
   }
 
-  /* Original destination section responsive spacing */
   .stays-section {
     padding: 52px 5%;
   }
@@ -1246,7 +1249,7 @@ img {
   }
 
   .search-page {
-    padding: 38px 5% 60px;
+    padding: 40px 5% 60px;
   }
 
   .search-layout {

@@ -1,7 +1,9 @@
 
 import { useLocation, useNavigate, Routes, Route } from "react-router-dom";
+
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+
 import HomePage, { type HomeSearchCriteria } from "./pages/HomePage";
 import HotelsPage from "./pages/HotelsPage";
 import MyBookingsPage from "./pages/MyBookingsPage";
@@ -14,18 +16,27 @@ import HotelDetailsPage from "./pages/HotelDetailsPage";
 import BookingConfirmationPage from "./pages/BookingConfirmationPage";
 import PaymentConfirmationPage from "./pages/PaymentConfirmationPage";
 import NotFoundPage from "./pages/NotFoundPage";
+
 import "./App.css";
 
 function HotelsRoute() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const initialLocation =
-    (location.state as { location?: string } | null)?.location ?? "";
+  const routeState = location.state as
+    | {
+        location?: string;
+        searchCriteria?: HomeSearchCriteria;
+      }
+    | null;
+
+  const initialLocation = routeState?.location ?? "";
+  const initialSearchCriteria = routeState?.searchCriteria;
 
   return (
     <HotelsPage
       initialLocation={initialLocation}
+      initialSearchCriteria={initialSearchCriteria}
       onViewStay={(stayId) => navigate(`/hotels/${stayId}`)}
     />
   );
@@ -67,8 +78,8 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/booking-confirmation" element={<BookingConfirmationPage />} />
-        <Route path="/payment-confirmation" element={<PaymentConfirmationPage />} />
+        <Route  path="/booking-confirmation" element={<BookingConfirmationPage />}/>
+        <Route path="/payment-confirmation" element={<PaymentConfirmationPage />}/>
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
 

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { HomeSearchCriteria } from "./HomePage";
 import capeTownImage from "../assets/search-results/cape-town.png";
 import tzaneenImage from "../assets/search-results/tzaneen.png";
 import johannesburgImage from "../assets/search-results/johannesburg.png";
@@ -8,6 +9,7 @@ import polokwaneImage from "../assets/search-results/polokwane.png";
 
 type HotelsPageProps = {
   initialLocation?: string;
+  initialSearchCriteria?: HomeSearchCriteria;
   onViewStay?: (stayId: string) => void;
 };
 
@@ -89,8 +91,14 @@ const destinations = [
   "Polokwane",
 ];
 
-function HotelsPage({ initialLocation = "", onViewStay }: HotelsPageProps) {
-  const [searchTerm, setSearchTerm] = useState(initialLocation);
+function HotelsPage({
+  initialLocation = "",
+  initialSearchCriteria,
+  onViewStay,
+}: HotelsPageProps) {
+  const [searchTerm, setSearchTerm] = useState(
+    initialSearchCriteria?.destination || initialLocation,
+  );
   const [maximumPrice, setMaximumPrice] = useState(3000);
   const [excellentOnly, setExcellentOnly] = useState(false);
   const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
@@ -168,6 +176,27 @@ function HotelsPage({ initialLocation = "", onViewStay }: HotelsPageProps) {
           ))}
         </div>
       </section>
+
+      {initialSearchCriteria && (
+        <section className="search-summary">
+          <h2>Your search</h2>
+          <p>
+            {initialSearchCriteria.destination || "All destinations"}
+            {" · "}
+            {initialSearchCriteria.adults}{" "}
+            {initialSearchCriteria.adults === 1 ? "adult" : "adults"}
+            {" · "}
+            {initialSearchCriteria.children}{" "}
+            {initialSearchCriteria.children === 1 ? "child" : "children"}
+            {" · "}
+            {initialSearchCriteria.rooms}{" "}
+            {initialSearchCriteria.rooms === 1 ? "room" : "rooms"}
+          </p>
+          <p>
+            {initialSearchCriteria.checkIn} to {initialSearchCriteria.checkOut}
+          </p>
+        </section>
+      )}
 
       <div className="search-layout">
         <aside className="filters-panel">
