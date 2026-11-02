@@ -14,12 +14,25 @@ export type InitializePaymentResponse = {
   };
 };
 
+export type BookingSummary = {
+  bookingReference: string;
+  branchName: string;
+  roomTypeName: string;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  nightlyPrice: number;
+  totalAmount: number;
+  currency: string;
+};
+
 export type VerifyPaymentResponse = {
   success: boolean;
   message: string;
   bookingId: number;
   bookingStatus: string;
   paymentStatus: string;
+  bookingSummary: BookingSummary;
 };
 
 export async function initializePaystackPayment(

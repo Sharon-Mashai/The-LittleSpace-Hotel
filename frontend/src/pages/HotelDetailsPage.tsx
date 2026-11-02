@@ -1,8 +1,12 @@
+
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getHotelBranches, type HotelBranch } from "../services/branches";
 import { getBranchRoomTypes, type RoomType } from "../services/roomTypes";
-import { checkRoomAvailability,type AvailableRoomType,} from "../services/availability";
+import {
+  checkRoomAvailability,
+  type AvailableRoomType,
+} from "../services/availability";
 import { createBooking } from "../services/bookings";
 import { initializePaystackPayment } from "../services/payments";
 
@@ -142,9 +146,10 @@ function HotelDetailsPage() {
       setBookingError("");
 
       // Step 1: Create a pending booking in the database.
+      // Convert the IDs to numbers before sending them to the backend.
       const booking = await createBooking({
-        branchId: branch.id,
-        roomTypeId: selectedRoom.id,
+        branchId: Number(branch.id),
+        roomTypeId: Number(selectedRoom.id),
         checkIn,
         checkOut,
         adults,

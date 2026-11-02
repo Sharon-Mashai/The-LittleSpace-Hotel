@@ -1,12 +1,32 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { verifyPaystackPayment } from "../services/payments";
+import { verifyPaystackPayment, type BookingSummary,} from "../services/payments";
 
 type VerificationResult = {
   bookingId: number;
   bookingStatus: string;
   paymentStatus: string;
+  bookingSummary: BookingSummary;
 };
+
+function formatDate(dateString: string): string {
+  const [year, month, day] = dateString.split("-").map(Number);
+
+  const date = new Date(year, month - 1, day);
+
+  return new Intl.DateTimeFormat("en-ZA", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatCurrency(amount: number, currency: string): string {
+  return new Intl.NumberFormat("en-ZA", {
+    style: "currency",
+    currency,
+  }).format(amount);
+}
 
 function PaymentConfirmationPage() {
   const [searchParams] = useSearchParams();
@@ -48,15 +68,15 @@ function PaymentConfirmationPage() {
         if (
           response.success &&
           response.bookingStatus === "confirmed" &&
-          response.paymentStatus === "succeeded"
+          response.paymentStatus === "succeeded" &&
+          response.bookingSummary
         ) {
           setResult({
             bookingId: response.bookingId,
             bookingStatus: response.bookingStatus,
             paymentStatus: response.paymentStatus,
+            bookingSummary: response.bookingSummary,
           });
-
-          sessionStorage.removeItem("littlespace_guest_email");
         } else {
           setError(response.message || "Your payment could not be confirmed.");
         }
@@ -74,6 +94,8 @@ function PaymentConfirmationPage() {
     void verifyPayment();
   }, [reference]);
 
+  const booking = result?.bookingSummary;
+
   return (
     <main className="account-page">
       <section className="empty-state confirmation-state">
@@ -84,6 +106,7 @@ function PaymentConfirmationPage() {
         {isVerifying && (
           <>
             <h2>Verifying your payment...</h2>
+
             <p>
               Please wait while we confirm your payment with Paystack. Do not
               close this page.
@@ -91,27 +114,73 @@ function PaymentConfirmationPage() {
           </>
         )}
 
-        {!isVerifying && result && (
+        {!isVerifying && result && booking && (
           <>
             <h2>Payment successful!</h2>
 
             <p>Your payment has been verified and your booking is confirmed.</p>
 
-            <p>
-              Booking ID: <strong>{result.bookingId}</strong>
-            </p>
+            <div className="booking-confirmation-summary">
+              <h2>Booking Summary</h2>
 
-            <p>
-              Payment reference: <strong>{reference}</strong>
-            </p>
+              <p>
+                Booking reference: <strong>{booking.bookingReference}</strong>
+              </p>
 
-            <p>
-              Booking status: <strong>{result.bookingStatus}</strong>
-            </p>
+              <p>
+                Booking ID: <strong>{result.bookingId}</strong>
+              </p>
 
-            <p>
-              Payment status: <strong>{result.paymentStatus}</strong>
-            </p>
+              <p>
+                Branch: <strong>{booking.branchName}</strong>
+              </p>
+
+              <p>
+                Room type: <strong>{booking.roomTypeName}</strong>
+              </p>
+
+              <p>
+                Check-in: <strong>{formatDate(booking.checkIn)}</strong>
+              </p>
+
+              <p>
+                Check-out: <strong>{formatDate(booking.checkOut)}</strong>
+              </p>
+
+              <p>
+                Number of nights: <strong>{booking.nights}</strong>
+              </p>
+
+              <p>
+                Nightly price:{" "}
+                <strong>
+                  {formatCurrency(booking.nightlyPrice, booking.currency)}
+                </strong>
+              </p>
+
+              <p>
+                Total amount:{" "}
+                <strong>
+                  {formatCurrency(booking.totalAmount, booking.currency)}
+                </strong>
+              </p>
+
+              <p>
+                Currency: <strong>{booking.currency}</strong>
+              </p>
+
+              <p>
+                Booking status: <strong>{result.bookingStatus}</strong>
+              </p>
+
+              <p>
+                Payment status: <strong>{result.paymentStatus}</strong>
+              </p>
+
+              <p>
+                Paystack reference: <strong>{reference}</strong>
+              </p>
+            </div>
 
             <Link className="primary-button" to="/my-bookings">
               View My Bookings
