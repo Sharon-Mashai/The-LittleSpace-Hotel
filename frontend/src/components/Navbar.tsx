@@ -1,9 +1,8 @@
-
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { getLoggedInGuest, logoutGuest } from "../services/auth";
 
 function Navbar() {
-  // Re-render the navbar when the route changes.
+ 
   useLocation();
 
   const navigate = useNavigate();
@@ -30,9 +29,7 @@ function Navbar() {
       </Link>
 
       <nav className="main-nav" aria-label="Main navigation">
-        <NavLink to="/" end>
-          Home
-        </NavLink>
+        <NavLink to="/" end> Home </NavLink>
 
         <NavLink to="/hotels">Hotels</NavLink>
 
@@ -40,20 +37,16 @@ function Navbar() {
 
         {guest ? (
           <>
-            <NavLink
-              to="/profile"
-              className="profile-avatar-link"
+            <NavLink to="/profile/favourites">Favourites</NavLink>
+
+            <NavLink to="/profile"className="profile-avatar-link"
               aria-label={`My profile, ${guest.full_name}`}
               title="My Profile"
             >
               <span className="profile-avatar">{initials}</span>
             </NavLink>
 
-            <button
-              type="button"
-              className="nav-logout"
-              onClick={handleSignOut}
-            >
+            <button type="button" className="nav-logout" onClick={handleSignOut}>
               Sign Out
             </button>
           </>
