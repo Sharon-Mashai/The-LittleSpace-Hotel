@@ -1,6 +1,18 @@
 import { useEffect, useState } from "react";
-import { getMyBookings, requestGuestBookingOtp, verifyGuestBookingOtp,type CustomerBooking,} from "../services/bookings";
+import {
+  getMyBookings,
+  requestGuestBookingOtp,
+  verifyGuestBookingOtp,
+  type CustomerBooking,
+} from "../services/bookings";
 import { getAuthToken } from "../services/auth";
+
+import capeTownImage from "../assets/search-results/cape-town.png";
+import tzaneenImage from "../assets/search-results/tzaneen.png";
+import johannesburgImage from "../assets/search-results/johannesburg.png";
+import pretoriaImage from "../assets/search-results/pretoria.png";
+import durbanImage from "../assets/search-results/durban.png";
+import polokwaneImage from "../assets/search-results/polokwane.png";
 
 const GUEST_ACCESS_TOKEN_KEY = "littlespace_guest_booking_access_token";
 
@@ -25,6 +37,20 @@ function formatStatus(status: string): string {
   return status
     .replace(/_/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+// Select the correct hotel image using the branch name.
+function getBranchImage(branchName: string): string {
+  const branch = branchName.toLowerCase();
+
+  if (branch.includes("cape town")) return capeTownImage;
+  if (branch.includes("tzaneen")) return tzaneenImage;
+  if (branch.includes("johannesburg")) return johannesburgImage;
+  if (branch.includes("pretoria")) return pretoriaImage;
+  if (branch.includes("durban")) return durbanImage;
+  if (branch.includes("polokwane")) return polokwaneImage;
+
+  return capeTownImage;
 }
 
 function MyBookingsPage() {
@@ -55,6 +81,7 @@ function MyBookingsPage() {
         setIsLoading(false);
         return;
       }
+
       setVerificationStep("bookings");
 
       try {
@@ -274,6 +301,13 @@ function MyBookingsPage() {
 
             {bookings.map((booking) => (
               <article className="booking-card" key={booking.id}>
+                <div className="booking-card-image">
+                  <img
+                    src={getBranchImage(booking.branch_name)}
+                    alt={`${booking.branch_name} hotel accommodation`}
+                  />
+                </div>
+
                 <div className="booking-card-heading">
                   <div>
                     <p className="eyebrow">BOOKING REFERENCE</p>
