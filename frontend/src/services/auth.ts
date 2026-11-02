@@ -9,7 +9,7 @@ export type GuestUser = {
   created_at: string;
 };
 
-type LoginResponse = {
+type AuthResponse = {
   success: boolean;
   message: string;
   token: string;
@@ -19,19 +19,37 @@ type LoginResponse = {
 const TOKEN_KEY = "littlespace_token";
 const USER_KEY = "littlespace_user";
 
-export async function loginGuest(
-  email: string,
-  password: string,
-): Promise<GuestUser> {
-  const response = await apiRequest<LoginResponse>("/auth/login", {
-    method: "POST",
-    body: { email, password },
-  });
-
+function saveAuthentication(response: AuthResponse): GuestUser {
   localStorage.setItem(TOKEN_KEY, response.token);
   localStorage.setItem(USER_KEY, JSON.stringify(response.user));
 
   return response.user;
+}
+
+export async function loginGuest(
+  email: string,
+  password: string,
+): Promise<GuestUser> {
+  const response = await apiRequest<AuthResponse>("/auth/login", {
+    method: "POST",
+    body: { email, password },
+  });
+
+  return saveAuthentication(response);
+}
+
+export async function registerGuest(
+  fullName: string,
+  email: string,
+  password: string,
+  phone: string,
+): Promise<GuestUser> {
+  const response = await apiRequest<AuthResponse>("/auth/register", {
+    method: "POST",
+    body: { fullName, email, password, phone },
+  });
+
+  return saveAuthentication(response);
 }
 
 export function getAuthToken(): string | null {

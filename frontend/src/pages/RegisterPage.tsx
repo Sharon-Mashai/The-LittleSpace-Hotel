@@ -1,10 +1,46 @@
-import { Link } from "react-router-dom";
+import { useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { registerGuest } from "../services/auth";
 
 function RegisterPage() {
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const navigate = useNavigate();
 
-   
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+
+    if (password !== confirmPassword) {
+      setError("Your passwords do not match.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Your password must contain at least 8 characters.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await registerGuest(fullName, email, password, phone);
+      navigate("/");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Registration failed. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -21,6 +57,8 @@ function RegisterPage() {
             type="text"
             placeholder="Enter your full name"
             autoComplete="name"
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
             required
           />
 
@@ -30,6 +68,8 @@ function RegisterPage() {
             type="email"
             placeholder="Enter your email address"
             autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
             required
           />
 
@@ -39,6 +79,8 @@ function RegisterPage() {
             type="tel"
             placeholder="Enter your phone number"
             autoComplete="tel"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
             required
           />
 
@@ -49,6 +91,8 @@ function RegisterPage() {
             placeholder="Create a password"
             autoComplete="new-password"
             minLength={8}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
             required
           />
 
@@ -59,11 +103,15 @@ function RegisterPage() {
             placeholder="Confirm your password"
             autoComplete="new-password"
             minLength={8}
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
             required
           />
 
-          <button className="primary-button" type="submit">
-            Create Account
+          {error && <p role="alert">{error}</p>}
+
+          <button className="primary-button" type="submit" disabled={loading}>
+            {loading ? "Creating account..." : "Create Account"}
           </button>
         </form>
 

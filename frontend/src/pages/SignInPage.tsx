@@ -18,7 +18,7 @@ function SignInPage() {
 
     try {
       await loginGuest(email, password);
-      navigate("/profile");
+      navigate("/");
     } catch (error) {
       setError(
         error instanceof Error
