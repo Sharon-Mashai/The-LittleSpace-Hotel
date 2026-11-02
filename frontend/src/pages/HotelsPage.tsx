@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { HomeSearchCriteria } from "./HomePage";
+import { getHotelBranches, type HotelBranch } from "../services/branches";
 import capeTownImage from "../assets/search-results/cape-town.png";
 import tzaneenImage from "../assets/search-results/tzaneen.png";
 import johannesburgImage from "../assets/search-results/johannesburg.png";
@@ -103,6 +104,29 @@ function HotelsPage({
   const [excellentOnly, setExcellentOnly] = useState(false);
   const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
 
+  const [branches, setBranches] = useState<HotelBranch[]>([]);
+  const [branchesLoading, setBranchesLoading] = useState(true);
+  const [branchesError, setBranchesError] = useState("");
+
+  useEffect(() => {
+    async function loadBranches() {
+      try {
+        const data = await getHotelBranches();
+        setBranches(data);
+      } catch (error) {
+        setBranchesError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load hotel branches.",
+        );
+      } finally {
+        setBranchesLoading(false);
+      }
+    }
+
+    loadBranches();
+  }, []);
+
   const filteredStays = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
@@ -121,6 +145,13 @@ function HotelsPage({
       return matchesLocation && withinPrice && meetsRating && hasFacilities;
     });
   }, [searchTerm, maximumPrice, excellentOnly, selectedFacilities]);
+
+  function getMatchingBranch(stay: Stay): HotelBranch | undefined {
+    return branches.find(
+      (branch) =>
+        branch.city.trim().toLowerCase() === stay.location.trim().toLowerCase(),
+    );
+  }
 
   function toggleFacility(facility: string) {
     setSelectedFacilities((current) =>
@@ -275,42 +306,64 @@ function HotelsPage({
             </div>
           </div>
 
+          {branchesLoading && (
+            <p role="status">Loading hotel branch information...</p>
+          )}
+
+          {branchesError && (
+            <p className="auth-error" role="alert">
+              {branchesError}
+            </p>
+          )}
+
           {filteredStays.length > 0 ? (
             <div className="results-grid">
-              {filteredStays.map((stay) => (
-                <article className="stay-card result-card" key={stay.id}>
-                  <div className="result-image-wrap">
-                    <img src={stay.image} alt={stay.imageAlt} />
-                    <span className="rating-badge">
-                      ★ {stay.rating.toFixed(1)}
-                    </span>
-                  </div>
+              {filteredStays.map((stay) => {
+                const matchingBranch = getMatchingBranch(stay);
 
-                  <div className="result-card-content">
-                    <p className="stay-location">SOUTH AFRICA</p>
-                    <h3>{stay.location}</h3>
+                return (
+                  <article className="stay-card result-card" key={stay.id}>
+                    <div className="result-image-wrap">
+                      <img src={stay.image} alt={stay.imageAlt} />
+                      <span className="rating-badge">
+                        ★ {stay.rating.toFixed(1)}
+                      </span>
+                    </div>
 
-                    <p className="facility-summary">
-                      {stay.facilities.join(" · ")}
-                    </p>
+                    <div className="result-card-content">
+                      <p className="stay-location">SOUTH AFRICA</p>
+                      <h3>{stay.location}</h3>
 
-                    <div className="result-card-footer">
-                      <p className="stay-price">
-                        <strong>R{stay.price.toLocaleString("en-ZA")}</strong>
-                        <span> / night</span>
+                      <p className="facility-summary">
+                        {stay.facilities.join(" · ")}
                       </p>
 
-                      <button
-                        className="card-book-button"
-                        type="button"
-                        onClick={() => onViewStay?.(stay.id)}
-                      >
-                        View stay
-                      </button>
+                      {matchingBranch && (
+                        <p className="facility-summary">
+                          {matchingBranch.name}
+                        </p>
+                      )}
+
+                      <div className="result-card-footer">
+                        <p className="stay-price">
+                          <strong>R{stay.price.toLocaleString("en-ZA")}</strong>
+                          <span> / night</span>
+                        </p>
+
+                        <button
+                          className="card-book-button"
+                          type="button"
+                          onClick={() =>
+                            onViewStay?.(matchingBranch?.slug ?? stay.id)
+                          }
+                        >
+                          View stay
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           ) : (
             <div className="no-results">
