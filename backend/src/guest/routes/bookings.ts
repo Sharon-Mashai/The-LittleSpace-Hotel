@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import { randomBytes } from "node:crypto";
 import { pool } from "../../config/db.js";
@@ -17,10 +16,136 @@ function isValidDate(value: unknown): value is string {
   const date = new Date(`${value}T00:00:00.000Z`);
 
   return (
-    !Number.isNaN(date.getTime()) &&
-    date.toISOString().slice(0, 10) === value
+    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
   );
 }
+
+// GET /api/bookings
+// Retrieve bookings belonging to a signed-in customer or guest.
+router.get(
+  "/",
+  optionalAuthenticateGuest,
+  async (req: AuthenticatedGuestRequest, res) => {
+    try {
+      let query;
+      let values: unknown[];
+
+      if (req.user) {
+        // Signed-in customers can only retrieve their own bookings.
+        query = `
+          SELECT
+            b.id,
+            b.booking_reference,
+            b.check_in::text AS check_in,
+            b.check_out::text AS check_out,
+            (b.check_out - b.check_in)::integer AS nights,
+            b.adults,
+            b.children,
+            b.status AS booking_status,
+            b.total_amount,
+            b.currency,
+            b.created_at,
+            b.guest_full_name,
+            b.guest_email,
+            b.guest_phone,
+            hb.name AS branch_name,
+            rt.name AS room_type_name,
+            br.nightly_price,
+            COALESCE(p.status, 'not_started') AS payment_status
+          FROM bookings b
+          INNER JOIN booking_rooms br ON br.booking_id = b.id
+          INNER JOIN rooms r ON r.id = br.room_id
+          INNER JOIN room_types rt ON rt.id = r.room_type_id
+          INNER JOIN hotel_branches hb ON hb.id = rt.branch_id
+          LEFT JOIN LATERAL (
+            SELECT status
+            FROM payments
+            WHERE booking_id = b.id
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+          ) p ON TRUE
+          WHERE b.user_id = $1
+          ORDER BY b.created_at DESC
+        `;
+
+        values = [req.user.id];
+      } else {
+        // Guests must provide the email address used during checkout.
+        const guestEmail =
+          typeof req.query.guestEmail === "string"
+            ? req.query.guestEmail.trim().toLowerCase()
+            : "";
+
+        if (
+          !guestEmail ||
+          guestEmail.length > 255 ||
+          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)
+        ) {
+          res.status(400).json({
+            success: false,
+            message: "A valid guest email address is required.",
+          });
+          return;
+        }
+
+        // Guests can only retrieve guest bookings matching their email.
+        query = `
+          SELECT
+            b.id,
+            b.booking_reference,
+            b.check_in::text AS check_in,
+            b.check_out::text AS check_out,
+            (b.check_out - b.check_in)::integer AS nights,
+            b.adults,
+            b.children,
+            b.status AS booking_status,
+            b.total_amount,
+            b.currency,
+            b.created_at,
+            b.guest_full_name,
+            b.guest_email,
+            b.guest_phone,
+            hb.name AS branch_name,
+            rt.name AS room_type_name,
+            br.nightly_price,
+            COALESCE(p.status, 'not_started') AS payment_status
+          FROM bookings b
+          INNER JOIN booking_rooms br ON br.booking_id = b.id
+          INNER JOIN rooms r ON r.id = br.room_id
+          INNER JOIN room_types rt ON rt.id = r.room_type_id
+          INNER JOIN hotel_branches hb ON hb.id = rt.branch_id
+          LEFT JOIN LATERAL (
+            SELECT status
+            FROM payments
+            WHERE booking_id = b.id
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+          ) p ON TRUE
+          WHERE b.user_id IS NULL
+            AND LOWER(b.guest_email) = $1
+          ORDER BY b.created_at DESC
+        `;
+
+        values = [guestEmail];
+      }
+
+      const result = await pool.query(query, values);
+
+      res.status(200).json({
+        success: true,
+        message: "Bookings retrieved successfully.",
+        data: result.rows,
+      });
+    } catch (error) {
+      console.error("Failed to retrieve bookings:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Unable to retrieve bookings.",
+      });
+    }
+  },
+);
 
 // POST /api/bookings
 router.post(
@@ -41,8 +166,7 @@ router.post(
     } = req.body ?? {};
 
     const validBranchId = Number.isSafeInteger(branchId) && branchId > 0;
-    const validRoomTypeId =
-      Number.isSafeInteger(roomTypeId) && roomTypeId > 0;
+    const validRoomTypeId = Number.isSafeInteger(roomTypeId) && roomTypeId > 0;
     const validAdults = Number.isSafeInteger(adults) && adults > 0;
     const validChildren = Number.isSafeInteger(children) && children >= 0;
 
@@ -64,8 +188,7 @@ router.post(
     const validRequests =
       specialRequests === undefined ||
       specialRequests === null ||
-      (typeof specialRequests === "string" &&
-        specialRequests.length <= 2000);
+      (typeof specialRequests === "string" && specialRequests.length <= 2000);
 
     if (
       !validBranchId ||

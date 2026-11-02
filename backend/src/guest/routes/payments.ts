@@ -302,34 +302,32 @@ router.post("/webhook", async (req, res) => {
     }
   }
 });
+
 // POST /api/payments/initialize
-router.post(
-  "/initialize",
-  optionalAuthenticateGuest,
-  async (req, res) => {
-    const secretKey = getTestSecretKey();
+router.post("/initialize", optionalAuthenticateGuest, async (req, res) => {
+  const secretKey = getTestSecretKey();
 
-    if (!secretKey) {
-      res.status(500).json({
-        success: false,
-        message: "Paystack test secret key is not configured.",
-      });
-      return;
-    }
+  if (!secretKey) {
+    res.status(500).json({
+      success: false,
+      message: "Paystack test secret key is not configured.",
+    });
+    return;
+  }
 
-    const bookingId = Number(req.body?.bookingId);
+  const bookingId = Number(req.body?.bookingId);
 
-    if (!Number.isSafeInteger(bookingId) || bookingId <= 0) {
-      res.status(400).json({
-        success: false,
-        message: "A valid booking ID is required.",
-      });
-      return;
-    }
+  if (!Number.isSafeInteger(bookingId) || bookingId <= 0) {
+    res.status(400).json({
+      success: false,
+      message: "A valid booking ID is required.",
+    });
+    return;
+  }
 
-    try {
-      const bookingResult = await pool.query(
-        `SELECT
+  try {
+    const bookingResult = await pool.query(
+      `SELECT
            id,
            user_id,
            guest_email,
@@ -338,51 +336,51 @@ router.post(
            status
          FROM bookings
          WHERE id = $1`,
-        [bookingId],
-      );
+      [bookingId],
+    );
 
-      if (bookingResult.rows.length === 0) {
-        res.status(404).json({
-          success: false,
-          message: "Booking not found.",
-        });
-        return;
-      }
+    if (bookingResult.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        message: "Booking not found.",
+      });
+      return;
+    }
 
-      const booking = bookingResult.rows[0];
+    const booking = bookingResult.rows[0];
 
-      if (!authorizeBookingAccess(req, booking, res)) {
-        return;
-      }
+    if (!authorizeBookingAccess(req, booking, res)) {
+      return;
+    }
 
-      if (booking.status !== "pending") {
-        res.status(409).json({
-          success: false,
-          message: "Only pending bookings can be paid for.",
-        });
-        return;
-      }
+    if (booking.status !== "pending") {
+      res.status(409).json({
+        success: false,
+        message: "Only pending bookings can be paid for.",
+      });
+      return;
+    }
 
-      const amount = Number(booking.total_amount);
-      const amountInCents = Math.round(amount * 100);
+    const amount = Number(booking.total_amount);
+    const amountInCents = Math.round(amount * 100);
 
-      if (
-        !Number.isFinite(amount) ||
-        amount <= 0 ||
-        !Number.isSafeInteger(amountInCents) ||
-        booking.currency !== "ZAR"
-      ) {
-        res.status(400).json({
-          success: false,
-          message: "The booking amount or currency is invalid.",
-        });
-        return;
-      }
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0 ||
+      !Number.isSafeInteger(amountInCents) ||
+      booking.currency !== "ZAR"
+    ) {
+      res.status(400).json({
+        success: false,
+        message: "The booking amount or currency is invalid.",
+      });
+      return;
+    }
 
-      const reference = `LS-${bookingId}-${Date.now()}-${randomBytes(4).toString("hex")}`;
+    const reference = `LS-${bookingId}-${Date.now()}-${randomBytes(4).toString("hex")}`;
 
-      const paymentResult = await pool.query(
-        `INSERT INTO payments (
+    const paymentResult = await pool.query(
+      `INSERT INTO payments (
            booking_id,
            provider,
            amount,
@@ -394,238 +392,252 @@ router.post(
          )
          VALUES ($1, 'paystack', $2, $3, 'pending', $4::jsonb, NOW(), NOW())
          RETURNING id`,
-        [
-          bookingId,
-          amount,
-          booking.currency,
-          JSON.stringify({ reference }),
-        ],
-      );
+      [bookingId, amount, booking.currency, JSON.stringify({ reference })],
+    );
 
-      const paymentId = paymentResult.rows[0].id;
+    const paymentId = paymentResult.rows[0].id;
 
-      // Paystack redirects the guest to this frontend route after payment.
-      const callbackUrl = `${
-        (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "")
-      }/payment-confirmation`;
+    // Paystack redirects the guest to this frontend route after payment.
+    const callbackUrl = `${(
+      process.env.FRONTEND_URL || "http://localhost:5173"
+    ).replace(/\/$/, "")}/payment-confirmation`;
 
-      const paystackResponse = await fetch(
-        `${PAYSTACK_URL}/transaction/initialize`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${secretKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: booking.guest_email,
-            amount: String(amountInCents),
-            currency: "ZAR",
-            reference,
-            callback_url: callbackUrl,
-          }),
+    const paystackResponse = await fetch(
+      `${PAYSTACK_URL}/transaction/initialize`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${secretKey}`,
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          email: booking.guest_email,
+          amount: String(amountInCents),
+          currency: "ZAR",
+          reference,
+          callback_url: callbackUrl,
+        }),
+      },
+    );
 
-      const paystackData = await paystackResponse.json();
+    const paystackData = await paystackResponse.json();
 
-      if (!paystackResponse.ok || !paystackData.status) {
-        await pool.query(
-          `UPDATE payments
+    if (!paystackResponse.ok || !paystackData.status) {
+      await pool.query(
+        `UPDATE payments
            SET status = 'failed',
                provider_data = provider_data || $1::jsonb,
                updated_at = NOW()
            WHERE id = $2`,
-          [
-            JSON.stringify({
-              initializationError:
-                paystackData.message ?? "Paystack initialization failed.",
-            }),
-            paymentId,
-          ],
-        );
-
-        res.status(502).json({
-          success: false,
-          message:
-            paystackData.message ?? "Could not initialize Paystack payment.",
-        });
-        return;
-      }
-
-      await pool.query(
-        `UPDATE payments
-         SET provider_data = provider_data || $1::jsonb,
-             updated_at = NOW()
-         WHERE id = $2`,
         [
           JSON.stringify({
-            authorizationUrl: paystackData.data.authorization_url,
-            accessCode: paystackData.data.access_code,
+            initializationError:
+              paystackData.message ?? "Paystack initialization failed.",
           }),
           paymentId,
         ],
       );
 
-      res.status(200).json({
-        success: true,
-        message: "Payment initialized successfully.",
-        data: {
-          paymentId,
-          bookingId,
-          reference,
-          amount,
-          currency: booking.currency,
+      res.status(502).json({
+        success: false,
+        message:
+          paystackData.message ?? "Could not initialize Paystack payment.",
+      });
+      return;
+    }
+
+    await pool.query(
+      `UPDATE payments
+         SET provider_data = provider_data || $1::jsonb,
+             updated_at = NOW()
+         WHERE id = $2`,
+      [
+        JSON.stringify({
           authorizationUrl: paystackData.data.authorization_url,
-        },
-      });
-    } catch (error) {
-      console.error("Paystack initialization error:", error);
+          accessCode: paystackData.data.access_code,
+        }),
+        paymentId,
+      ],
+    );
 
-      res.status(500).json({
-        success: false,
-        message: "An error occurred while initializing the payment.",
-      });
-    }
-  },
-);
+    res.status(200).json({
+      success: true,
+      message: "Payment initialized successfully.",
+      data: {
+        paymentId,
+        bookingId,
+        reference,
+        amount,
+        currency: booking.currency,
+        authorizationUrl: paystackData.data.authorization_url,
+      },
+    });
+  } catch (error) {
+    console.error("Paystack initialization error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while initializing the payment.",
+    });
+  }
+});
+
 // POST /api/payments/verify
-router.post(
-  "/verify",
-  optionalAuthenticateGuest,
-  async (req, res) => {
-    const secretKey = getTestSecretKey();
+router.post("/verify", optionalAuthenticateGuest, async (req, res) => {
+  const secretKey = getTestSecretKey();
 
-    if (!secretKey) {
-      res.status(500).json({
-        success: false,
-        message: "Paystack test secret key is not configured.",
-      });
-      return;
-    }
+  if (!secretKey) {
+    res.status(500).json({
+      success: false,
+      message: "Paystack test secret key is not configured.",
+    });
+    return;
+  }
 
-    const reference =
-      typeof req.body?.reference === "string"
-        ? req.body.reference.trim()
-        : "";
+  const reference =
+    typeof req.body?.reference === "string" ? req.body.reference.trim() : "";
 
-    if (!reference) {
-      res.status(400).json({
-        success: false,
-        message: "A payment reference is required.",
-      });
-      return;
-    }
+  if (!reference) {
+    res.status(400).json({
+      success: false,
+      message: "A payment reference is required.",
+    });
+    return;
+  }
 
-    try {
-      const paymentResult = await pool.query(
-        `SELECT
+  try {
+    const paymentResult = await pool.query(
+      `SELECT
            p.id AS payment_id,
            p.booking_id,
            p.amount,
            p.currency,
            p.status AS payment_status,
            p.provider_payment_id,
-           p.provider_data,
            b.user_id,
            b.guest_email,
-           b.status AS booking_status
+           b.booking_reference,
+           b.check_in::text AS check_in,
+           b.check_out::text AS check_out,
+           b.total_amount,
+           b.status AS booking_status,
+           br.nightly_price,
+           rt.name AS room_type_name,
+           hb.name AS branch_name,
+           (b.check_out - b.check_in)::integer AS nights
          FROM payments p
          JOIN bookings b ON b.id = p.booking_id
+         JOIN booking_rooms br ON br.booking_id = b.id
+         JOIN rooms r ON r.id = br.room_id
+         JOIN room_types rt ON rt.id = r.room_type_id
+         JOIN hotel_branches hb ON hb.id = rt.branch_id
          WHERE p.provider = 'paystack'
            AND p.provider_data->>'reference' = $1`,
-        [reference],
-      );
+      [reference],
+    );
 
-      if (paymentResult.rows.length === 0) {
-        res.status(404).json({
-          success: false,
-          message: "Payment reference not found.",
-        });
-        return;
-      }
+    if (paymentResult.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        message: "Payment reference not found.",
+      });
+      return;
+    }
 
-      const payment = paymentResult.rows[0];
+    const payment = paymentResult.rows[0];
 
-      if (!authorizeBookingAccess(req, payment, res)) {
-        return;
-      }
+    if (!authorizeBookingAccess(req, payment, res)) {
+      return;
+    }
 
-      if (
-        payment.payment_status === "succeeded" &&
-        payment.booking_status === "confirmed"
-      ) {
-        res.status(200).json({
-          success: true,
-          message: "Payment has already been verified.",
-          bookingId: payment.booking_id,
-          bookingStatus: "confirmed",
-          paymentStatus: "succeeded",
-        });
-        return;
-      }
+    const bookingSummary = {
+      bookingReference: payment.booking_reference,
+      branchName: payment.branch_name,
+      roomTypeName: payment.room_type_name,
+      checkIn: payment.check_in,
+      checkOut: payment.check_out,
+      nights: payment.nights,
+      nightlyPrice: Number(payment.nightly_price),
+      totalAmount: Number(payment.total_amount),
+      currency: payment.currency,
+    };
 
-      if (
-        payment.payment_status !== "pending" ||
-        payment.booking_status !== "pending"
-      ) {
-        res.status(409).json({
-          success: false,
-          message: "This payment or booking is no longer pending.",
-        });
-        return;
-      }
+    if (
+      payment.payment_status === "succeeded" &&
+      payment.booking_status === "confirmed"
+    ) {
+      res.status(200).json({
+        success: true,
+        message: "Payment has already been verified.",
+        bookingId: payment.booking_id,
+        bookingStatus: "confirmed",
+        paymentStatus: "succeeded",
+        bookingSummary,
+      });
+      return;
+    }
 
-      const paystackResponse = await fetch(
-        `${PAYSTACK_URL}/transaction/verify/${encodeURIComponent(reference)}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${secretKey}`,
-            "Content-Type": "application/json",
-          },
+    if (
+      payment.payment_status !== "pending" ||
+      payment.booking_status !== "pending"
+    ) {
+      res.status(409).json({
+        success: false,
+        message: "This payment or booking is no longer pending.",
+      });
+      return;
+    }
+
+    const paystackResponse = await fetch(
+      `${PAYSTACK_URL}/transaction/verify/${encodeURIComponent(reference)}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${secretKey}`,
+          "Content-Type": "application/json",
         },
-      );
+      },
+    );
 
-      const paystackData = await paystackResponse.json();
+    const paystackData = await paystackResponse.json();
 
-      if (
-        !paystackResponse.ok ||
-        !paystackData.status ||
-        paystackData.data?.status !== "success"
-      ) {
-        res.status(400).json({
-          success: false,
-          message:
-            paystackData.message ?? "Paystack could not verify this payment.",
-        });
-        return;
-      }
+    if (
+      !paystackResponse.ok ||
+      !paystackData.status ||
+      paystackData.data?.status !== "success"
+    ) {
+      res.status(400).json({
+        success: false,
+        message:
+          paystackData.message ?? "Paystack could not verify this payment.",
+      });
+      return;
+    }
 
-      const transaction = paystackData.data;
-      const expectedAmount = Math.round(Number(payment.amount) * 100);
+    const transaction = paystackData.data;
+    const expectedAmount = Math.round(Number(payment.amount) * 100);
 
-      if (
-        !Number.isSafeInteger(expectedAmount) ||
-        transaction.amount !== expectedAmount ||
-        transaction.currency !== payment.currency ||
-        payment.currency !== "ZAR" ||
-        transaction.reference !== reference
-      ) {
-        res.status(400).json({
-          success: false,
-          message: "The verified payment details do not match the booking.",
-        });
-        return;
-      }
+    if (
+      !Number.isSafeInteger(expectedAmount) ||
+      transaction.amount !== expectedAmount ||
+      transaction.currency !== payment.currency ||
+      payment.currency !== "ZAR" ||
+      transaction.reference !== reference
+    ) {
+      res.status(400).json({
+        success: false,
+        message: "The verified payment details do not match the booking.",
+      });
+      return;
+    }
 
-      const client = await pool.connect();
+    const client = await pool.connect();
 
-      try {
-        await client.query("BEGIN");
+    try {
+      await client.query("BEGIN");
 
-        const lockedResult = await client.query(
-          `SELECT
+      const lockedResult = await client.query(
+        `SELECT
              p.id AS payment_id,
              p.booking_id,
              p.amount,
@@ -637,114 +649,115 @@ router.post(
            JOIN bookings b ON b.id = p.booking_id
            WHERE p.id = $1
            FOR UPDATE OF p, b`,
-          [payment.payment_id],
-        );
+        [payment.payment_id],
+      );
 
-        if (lockedResult.rows.length === 0) {
-          await client.query("ROLLBACK");
+      if (lockedResult.rows.length === 0) {
+        await client.query("ROLLBACK");
 
-          res.status(404).json({
-            success: false,
-            message: "Payment record could not be found.",
-          });
-          return;
-        }
+        res.status(404).json({
+          success: false,
+          message: "Payment record could not be found.",
+        });
+        return;
+      }
 
-        const lockedPayment = lockedResult.rows[0];
+      const lockedPayment = lockedResult.rows[0];
 
-        if (
-          lockedPayment.payment_status === "succeeded" &&
-          lockedPayment.booking_status === "confirmed"
-        ) {
-          await client.query("COMMIT");
+      if (
+        lockedPayment.payment_status === "succeeded" &&
+        lockedPayment.booking_status === "confirmed"
+      ) {
+        await client.query("COMMIT");
 
-          res.status(200).json({
-            success: true,
-            message: "Payment has already been verified.",
-            bookingId: lockedPayment.booking_id,
-            bookingStatus: "confirmed",
-            paymentStatus: "succeeded",
-          });
-          return;
-        }
+        res.status(200).json({
+          success: true,
+          message: "Payment has already been verified.",
+          bookingId: lockedPayment.booking_id,
+          bookingStatus: "confirmed",
+          paymentStatus: "succeeded",
+          bookingSummary,
+        });
+        return;
+      }
 
-        if (
-          lockedPayment.payment_status !== "pending" ||
-          lockedPayment.booking_status !== "pending"
-        ) {
-          await client.query("ROLLBACK");
+      if (
+        lockedPayment.payment_status !== "pending" ||
+        lockedPayment.booking_status !== "pending"
+      ) {
+        await client.query("ROLLBACK");
 
-          res.status(409).json({
-            success: false,
-            message: "This payment or booking is no longer pending.",
-          });
-          return;
-        }
+        res.status(409).json({
+          success: false,
+          message: "This payment or booking is no longer pending.",
+        });
+        return;
+      }
 
-        await client.query(
-          `UPDATE payments
+      await client.query(
+        `UPDATE payments
            SET status = 'succeeded',
                provider_payment_id = $1,
                paid_at = COALESCE($2::timestamptz, NOW()),
                provider_data = provider_data || $3::jsonb,
                updated_at = NOW()
            WHERE id = $4`,
-          [
-            String(transaction.id),
-            transaction.paid_at ?? null,
-            JSON.stringify({
-              verificationStatus: "success",
-              verifiedAt: new Date().toISOString(),
-              verifiedAmount: transaction.amount,
-              verifiedCurrency: transaction.currency,
-            }),
-            lockedPayment.payment_id,
-          ],
-        );
+        [
+          String(transaction.id),
+          transaction.paid_at ?? null,
+          JSON.stringify({
+            verificationStatus: "success",
+            verifiedAt: new Date().toISOString(),
+            verifiedAmount: transaction.amount,
+            verifiedCurrency: transaction.currency,
+          }),
+          lockedPayment.payment_id,
+        ],
+      );
 
-        const bookingUpdate = await client.query(
-          `UPDATE bookings
+      const bookingUpdate = await client.query(
+        `UPDATE bookings
            SET status = 'confirmed',
                updated_at = NOW()
            WHERE id = $1
              AND status = 'pending'
            RETURNING id`,
-          [lockedPayment.booking_id],
-        );
+        [lockedPayment.booking_id],
+      );
 
-        if (bookingUpdate.rows.length !== 1) {
-          throw new Error("The booking could not be confirmed.");
-        }
-
-        await client.query("COMMIT");
-
-        res.status(200).json({
-          success: true,
-          message: "Payment verified and booking confirmed.",
-          bookingId: lockedPayment.booking_id,
-          bookingStatus: "confirmed",
-          paymentStatus: "succeeded",
-        });
-      } catch (error) {
-        await client.query("ROLLBACK").catch((rollbackError) => {
-          console.error("Payment verification rollback failed:", rollbackError);
-        });
-
-        throw error;
-      } finally {
-        client.release();
+      if (bookingUpdate.rows.length !== 1) {
+        throw new Error("The booking could not be confirmed.");
       }
+
+      await client.query("COMMIT");
+
+      res.status(200).json({
+        success: true,
+        message: "Payment verified and booking confirmed.",
+        bookingId: lockedPayment.booking_id,
+        bookingStatus: "confirmed",
+        paymentStatus: "succeeded",
+        bookingSummary,
+      });
     } catch (error) {
-      console.error("Paystack payment verification error:", error);
+      await client.query("ROLLBACK").catch((rollbackError) => {
+        console.error("Payment verification rollback failed:", rollbackError);
+      });
 
-      if (!res.headersSent) {
-        res.status(500).json({
-          success: false,
-          message: "An error occurred while verifying the payment.",
-        });
-      }
+      throw error;
+    } finally {
+      client.release();
     }
-  },
-);
+  } catch (error) {
+    console.error("Paystack payment verification error:", error);
+
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: "An error occurred while verifying the payment.",
+      });
+    }
+  }
+});
 
 export default router;
