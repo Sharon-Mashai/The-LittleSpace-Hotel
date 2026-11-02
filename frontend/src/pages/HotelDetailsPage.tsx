@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getHotelBranches, type HotelBranch } from "../services/branches";
 import { getBranchRoomTypes, type RoomType } from "../services/roomTypes";
-import {
-  checkRoomAvailability,
-  type AvailableRoomType,
-} from "../services/availability";
+import { checkRoomAvailability,type AvailableRoomType,} from "../services/availability";
+import { createBooking } from "../services/bookings";
+import { initializePaystackPayment } from "../services/payments";
 
 function HotelDetailsPage() {
   const { hotelId } = useParams<{ hotelId: string }>();
@@ -21,10 +20,22 @@ function HotelDetailsPage() {
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
 
+  const [selectedRoom, setSelectedRoom] = useState<AvailableRoomType | null>(
+    null,
+  );
+
+  const [guestFullName, setGuestFullName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [specialRequests, setSpecialRequests] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [creatingBooking, setCreatingBooking] = useState(false);
+
   const [error, setError] = useState("");
   const [availabilityError, setAvailabilityError] = useState("");
+  const [bookingError, setBookingError] = useState("");
 
   useEffect(() => {
     async function loadBranchDetails() {
@@ -62,9 +73,7 @@ function HotelDetailsPage() {
     }
   }, [hotelId]);
 
-  async function handleAvailabilitySearch(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function handleAvailabilitySearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!branch) return;
@@ -83,6 +92,8 @@ function HotelDetailsPage() {
       setCheckingAvailability(true);
       setAvailabilityError("");
       setAvailableRooms(null);
+      setSelectedRoom(null);
+      setBookingError("");
 
       const results = await checkRoomAvailability({
         branchId: branch.id,
@@ -109,6 +120,64 @@ function HotelDetailsPage() {
       style: "currency",
       currency,
     }).format(Number(price));
+  }
+
+  async function handleBookingSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!branch || !selectedRoom) {
+      setBookingError("Please select an available room first.");
+      return;
+    }
+
+    if (!guestFullName.trim() || !guestEmail.trim() || !guestPhone.trim()) {
+      setBookingError(
+        "Please enter your name, email address and phone number.",
+      );
+      return;
+    }
+
+    try {
+      setCreatingBooking(true);
+      setBookingError("");
+
+      // Step 1: Create a pending booking in the database.
+      const booking = await createBooking({
+        branchId: branch.id,
+        roomTypeId: selectedRoom.id,
+        checkIn,
+        checkOut,
+        adults,
+        children,
+        guestFullName: guestFullName.trim(),
+        guestEmail: guestEmail.trim().toLowerCase(),
+        guestPhone: guestPhone.trim(),
+        specialRequests: specialRequests.trim() || undefined,
+      });
+
+      // Step 2: Save the guest email so the confirmation page
+      // can retrieve it after the guest returns from Paystack.
+      sessionStorage.setItem(
+        "littlespace_guest_email",
+        guestEmail.trim().toLowerCase(),
+      );
+
+      // Step 3: Initialize the Paystack test payment.
+      const payment = await initializePaystackPayment(
+        booking.id,
+        guestEmail.trim().toLowerCase(),
+      );
+
+      // Step 4: Redirect the guest to Paystack's payment page.
+      window.location.assign(payment.data.authorizationUrl);
+    } catch (err) {
+      setBookingError(
+        err instanceof Error
+          ? err.message
+          : "We could not create your booking or initialize payment. Please try again.",
+      );
+      setCreatingBooking(false);
+    }
   }
 
   if (loading) {
@@ -288,10 +357,107 @@ function HotelDetailsPage() {
                   {room.description && <p>{room.description}</p>}
                   <p>{formatPrice(room.base_price, room.currency)} per night</p>
                   <p>Available rooms: {room.available_rooms}</p>
+
+                  <button
+                    className="primary-button"
+                    type="button"
+                    onClick={() => {
+                      setSelectedRoom(room);
+                      setBookingError("");
+                    }}
+                  >
+                    {selectedRoom?.id === room.id
+                      ? "Room selected"
+                      : "Select this room"}
+                  </button>
                 </article>
               ))}
             </div>
           )}
+        </section>
+      )}
+
+      {selectedRoom && (
+        <section className="empty-state">
+          <h2>Complete your booking</h2>
+
+          <p>
+            Selected room: <strong>{selectedRoom.name}</strong>
+          </p>
+
+          <p>
+            Price per night:{" "}
+            <strong>
+              {formatPrice(selectedRoom.base_price, selectedRoom.currency)}
+            </strong>
+          </p>
+
+          <p>
+            Please enter your contact details before proceeding to payment. You
+            can book as a guest without creating an account.
+          </p>
+
+          <form onSubmit={handleBookingSubmit}>
+            <div>
+              <label htmlFor="guestFullName">Full name</label>
+              <input
+                id="guestFullName"
+                type="text"
+                value={guestFullName}
+                onChange={(event) => setGuestFullName(event.target.value)}
+                autoComplete="name"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="guestEmail">Email address</label>
+              <input
+                id="guestEmail"
+                type="email"
+                value={guestEmail}
+                onChange={(event) => setGuestEmail(event.target.value)}
+                autoComplete="email"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="guestPhone">Phone number</label>
+              <input
+                id="guestPhone"
+                type="tel"
+                value={guestPhone}
+                onChange={(event) => setGuestPhone(event.target.value)}
+                autoComplete="tel"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="specialRequests">
+                Special requests (optional)
+              </label>
+              <textarea
+                id="specialRequests"
+                value={specialRequests}
+                onChange={(event) => setSpecialRequests(event.target.value)}
+                rows={3}
+              />
+            </div>
+
+            {bookingError && <p role="alert">{bookingError}</p>}
+
+            <button
+              className="primary-button"
+              type="submit"
+              disabled={creatingBooking}
+            >
+              {creatingBooking
+                ? "Preparing your payment..."
+                : "Continue to payment"}
+            </button>
+          </form>
         </section>
       )}
 
