@@ -1,5 +1,5 @@
-
 import { apiRequest } from "./api";
+import { getAuthToken } from "./auth";
 
 export type CreateBookingDetails = {
   branchId: number;
@@ -40,10 +40,9 @@ type CreateBookingResponse = {
 export async function createBooking(
   details: CreateBookingDetails,
 ): Promise<CreatedBooking> {
-  const response = await apiRequest<CreateBookingResponse>("/bookings", {
+  return apiRequest<CreateBookingResponse>("/bookings", {
     method: "POST",
+    token: getAuthToken() ?? undefined,
     body: details,
-  });
-
-  return response.data;
+  }).then((response) => response.data);
 }
