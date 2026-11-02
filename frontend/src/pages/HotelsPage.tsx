@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { HomeSearchCriteria } from "./HomePage";
 import { getHotelBranches, type HotelBranch } from "../services/branches";
+import { getGuestFavourites, addGuestFavourite, removeGuestFavourite,} from "../services/favourites";
+import { getAuthToken } from "../services/auth";
 import capeTownImage from "../assets/search-results/cape-town.png";
 import tzaneenImage from "../assets/search-results/tzaneen.png";
 import johannesburgImage from "../assets/search-results/johannesburg.png";
@@ -97,6 +100,8 @@ function HotelsPage({
   initialSearchCriteria,
   onViewStay,
 }: HotelsPageProps) {
+  const navigate = useNavigate();
+
   const [searchTerm, setSearchTerm] = useState(
     initialSearchCriteria?.destination || initialLocation,
   );
@@ -107,6 +112,13 @@ function HotelsPage({
   const [branches, setBranches] = useState<HotelBranch[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
   const [branchesError, setBranchesError] = useState("");
+
+  const [favouriteBranchIds, setFavouriteBranchIds] = useState<number[]>([]);
+  const [favouritesLoading, setFavouritesLoading] = useState(false);
+  const [favouriteActionId, setFavouriteActionId] = useState<number | null>(
+    null,
+  );
+  const [favouriteError, setFavouriteError] = useState("");
 
   useEffect(() => {
     async function loadBranches() {
@@ -125,6 +137,33 @@ function HotelsPage({
     }
 
     loadBranches();
+  }, []);
+
+  useEffect(() => {
+    async function loadFavourites() {
+      if (!getAuthToken()) {
+        setFavouriteBranchIds([]);
+        return;
+      }
+
+      try {
+        setFavouritesLoading(true);
+
+        const data = await getGuestFavourites();
+
+        setFavouriteBranchIds(data.map((favourite) => favourite.branch_id));
+      } catch (error) {
+        setFavouriteError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load your favourites.",
+        );
+      } finally {
+        setFavouritesLoading(false);
+      }
+    }
+
+    loadFavourites();
   }, []);
 
   const filteredStays = useMemo(() => {
@@ -151,6 +190,42 @@ function HotelsPage({
       (branch) =>
         branch.city.trim().toLowerCase() === stay.location.trim().toLowerCase(),
     );
+  }
+
+  async function handleToggleFavourite(branch: HotelBranch) {
+    if (!getAuthToken()) {
+      navigate("/sign-in");
+      return;
+    }
+
+    setFavouriteError("");
+    setFavouriteActionId(branch.id);
+
+    const isFavourite = favouriteBranchIds.includes(branch.id);
+
+    try {
+      if (isFavourite) {
+        await removeGuestFavourite(branch.id);
+
+        setFavouriteBranchIds((current) =>
+          current.filter((id) => id !== branch.id),
+        );
+      } else {
+        await addGuestFavourite(branch.id);
+
+        setFavouriteBranchIds((current) =>
+          current.includes(branch.id) ? current : [...current, branch.id],
+        );
+      }
+    } catch (error) {
+      setFavouriteError(
+        error instanceof Error
+          ? error.message
+          : "Unable to update your favourites. Please try again.",
+      );
+    } finally {
+      setFavouriteActionId(null);
+    }
   }
 
   function toggleFacility(facility: string) {
@@ -316,18 +391,56 @@ function HotelsPage({
             </p>
           )}
 
+          {favouriteError && (
+            <p className="auth-error" role="alert">
+              {favouriteError}
+            </p>
+          )}
+
+          {favouritesLoading && <p role="status">Loading your favourites...</p>}
+
           {filteredStays.length > 0 ? (
             <div className="results-grid">
               {filteredStays.map((stay) => {
                 const matchingBranch = getMatchingBranch(stay);
+                const isFavourite = matchingBranch
+                  ? favouriteBranchIds.includes(matchingBranch.id)
+                  : false;
 
                 return (
                   <article className="stay-card result-card" key={stay.id}>
                     <div className="result-image-wrap">
                       <img src={stay.image} alt={stay.imageAlt} />
+
                       <span className="rating-badge">
                         ★ {stay.rating.toFixed(1)}
                       </span>
+
+                      {matchingBranch && (
+                        <button
+                          className={`favourite-toggle ${
+                            isFavourite ? "active" : ""
+                          }`}
+                          type="button"
+                          aria-label={
+                            isFavourite
+                              ? `Remove ${stay.location} from favourites`
+                              : `Add ${stay.location} to favourites`
+                          }
+                          aria-pressed={isFavourite}
+                          disabled={
+                            favouriteActionId === matchingBranch.id ||
+                            favouritesLoading
+                          }
+                          onClick={() => handleToggleFavourite(matchingBranch)}
+                        >
+                          {favouriteActionId === matchingBranch.id
+                            ? "..."
+                            : isFavourite
+                              ? "♡"
+                              : "♡"}
+                        </button>
+                      )}
                     </div>
 
                     <div className="result-card-content">
