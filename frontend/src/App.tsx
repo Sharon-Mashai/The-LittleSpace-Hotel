@@ -1,34 +1,29 @@
-
 import { useLocation, useNavigate, Routes, Route } from "react-router-dom";
-
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-
 import HomePage, { type HomeSearchCriteria } from "./pages/HomePage";
 import HotelsPage from "./pages/HotelsPage";
 import MyBookingsPage from "./pages/MyBookingsPage";
 import SignInPage from "./pages/SignInPage";
 import RegisterPage from "./pages/RegisterPage";
 import ProfilePage from "./pages/ProfilePage";
+import FavouritesPage from "./pages/FavouritesPage";
 import SettingsPage from "./pages/SettingsPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import HotelDetailsPage from "./pages/HotelDetailsPage";
 import BookingConfirmationPage from "./pages/BookingConfirmationPage";
 import PaymentConfirmationPage from "./pages/PaymentConfirmationPage";
 import NotFoundPage from "./pages/NotFoundPage";
-
 import "./App.css";
 
 function HotelsRoute() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const routeState = location.state as
-    | {
-        location?: string;
-        searchCriteria?: HomeSearchCriteria;
-      }
-    | null;
+  const routeState = location.state as {
+    location?: string;
+    searchCriteria?: HomeSearchCriteria;
+  } | null;
 
   const initialLocation = routeState?.location ?? "";
   const initialSearchCriteria = routeState?.searchCriteria;
@@ -76,9 +71,10 @@ function App() {
         <Route path="/sign-in" element={<SignInPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/favourites" element={<FavouritesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route  path="/booking-confirmation" element={<BookingConfirmationPage />}/>
+        <Route path="/booking-confirmation" element={<BookingConfirmationPage />} />
         <Route path="/payment-confirmation" element={<PaymentConfirmationPage />}/>
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
