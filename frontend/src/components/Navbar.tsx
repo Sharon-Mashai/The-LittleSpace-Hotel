@@ -1,6 +1,27 @@
-import { Link, NavLink } from "react-router-dom";
+
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { getLoggedInGuest, logoutGuest } from "../services/auth";
 
 function Navbar() {
+  // Re-render the navbar when the route changes.
+  useLocation();
+
+  const navigate = useNavigate();
+  const guest = getLoggedInGuest();
+
+  const initials = guest?.full_name
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  function handleSignOut() {
+    logoutGuest();
+    navigate("/");
+  }
+
   return (
     <header className="site-header">
       <Link className="brand" to="/" aria-label="The LittleSpace Hotel home">
@@ -17,7 +38,28 @@ function Navbar() {
 
         <NavLink to="/my-bookings">My Bookings</NavLink>
 
-        <NavLink to="/sign-in">Sign In</NavLink>
+        {guest ? (
+          <>
+            <NavLink
+              to="/profile"
+              className="profile-avatar-link"
+              aria-label={`My profile, ${guest.full_name}`}
+              title="My Profile"
+            >
+              <span className="profile-avatar">{initials}</span>
+            </NavLink>
+
+            <button
+              type="button"
+              className="nav-logout"
+              onClick={handleSignOut}
+            >
+              Sign Out
+            </button>
+          </>
+        ) : (
+          <NavLink to="/sign-in">Sign In</NavLink>
+        )}
       </nav>
     </header>
   );
