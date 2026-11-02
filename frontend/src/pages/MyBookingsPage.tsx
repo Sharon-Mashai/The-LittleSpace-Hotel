@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { getMyBookings, type CustomerBooking } from "../services/bookings";
+import { getMyBookings, requestGuestBookingOtp, verifyGuestBookingOtp,type CustomerBooking,} from "../services/bookings";
+import { getAuthToken } from "../services/auth";
+
+const GUEST_ACCESS_TOKEN_KEY = "littlespace_guest_booking_access_token";
 
 function formatDate(dateString: string): string {
   const [year, month, day] = dateString.split("-").map(Number);
@@ -29,23 +32,56 @@ function MyBookingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+
+  const [isRequestingOtp, setIsRequestingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+
+  const [verificationStep, setVerificationStep] = useState<
+    "email" | "otp" | "bookings"
+  >("email");
+
+  const [message, setMessage] = useState("");
+
+  // Load bookings automatically for signed-in customers.
+  // OTP-verified guests can also return using their saved session token.
   useEffect(() => {
     async function loadBookings() {
+      const customerToken = getAuthToken();
+      const guestAccessToken = sessionStorage.getItem(GUEST_ACCESS_TOKEN_KEY);
+
+      if (!customerToken && !guestAccessToken) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
         setError("");
 
-        const guestEmail = sessionStorage.getItem("littlespace_guest_email");
-
-        const customerBookings = await getMyBookings(guestEmail ?? undefined);
+        const customerBookings = await getMyBookings(
+          guestAccessToken ?? undefined,
+        );
 
         setBookings(customerBookings);
+        setVerificationStep("bookings");
       } catch (bookingError) {
-        setError(
+        const errorMessage =
           bookingError instanceof Error
             ? bookingError.message
-            : "Unable to load your bookings. Please try again.",
-        );
+            : "Unable to load your bookings. Please try again.";
+
+        setError(errorMessage);
+
+        if (
+          !customerToken &&
+          guestAccessToken &&
+          /expired|invalid/i.test(errorMessage)
+        ) {
+          sessionStorage.removeItem(GUEST_ACCESS_TOKEN_KEY);
+          setVerificationStep("email");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -53,6 +89,68 @@ function MyBookingsPage() {
 
     void loadBookings();
   }, []);
+
+  async function handleRequestOtp(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    try {
+      setIsRequestingOtp(true);
+      setError("");
+      setMessage("");
+
+      const response = await requestGuestBookingOtp(email.trim());
+
+      setMessage(response.message);
+      setVerificationStep("otp");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to send the verification code. Please try again.",
+      );
+    } finally {
+      setIsRequestingOtp(false);
+    }
+  }
+
+  async function handleVerifyOtp(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    try {
+      setIsVerifyingOtp(true);
+      setError("");
+      setMessage("");
+
+      const response = await verifyGuestBookingOtp(email.trim(), otp.trim());
+
+      sessionStorage.setItem(GUEST_ACCESS_TOKEN_KEY, response.accessToken);
+
+      const guestBookings = await getMyBookings(response.accessToken);
+
+      setBookings(guestBookings);
+      setVerificationStep("bookings");
+      setOtp("");
+      setMessage("");
+    } catch (verificationError) {
+      setError(
+        verificationError instanceof Error
+          ? verificationError.message
+          : "Unable to verify your email. Please try again.",
+      );
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  }
+
+  function handleChangeEmail() {
+    sessionStorage.removeItem(GUEST_ACCESS_TOKEN_KEY);
+    setBookings([]);
+    setOtp("");
+    setEmail("");
+    setError("");
+    setMessage("");
+    setVerificationStep("email");
+  }
 
   return (
     <main className="account-page">
@@ -69,95 +167,181 @@ function MyBookingsPage() {
         </section>
       )}
 
-      {!isLoading && error && (
+      {!isLoading && !getAuthToken() && verificationStep === "email" && (
+        <section className="empty-state">
+          <h2>Access your guest bookings</h2>
+          <p>
+            Enter the email address you used when making your reservation. We'll
+            send you a six-digit verification code.
+          </p>
+
+          <form onSubmit={handleRequestOtp}>
+            <label htmlFor="guest-booking-email">Email address</label>
+            <input
+              id="guest-booking-email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="Enter your booking email"
+              autoComplete="email"
+              required
+            />
+
+            <button type="submit" disabled={isRequestingOtp}>
+              {isRequestingOtp ? "Sending code..." : "Send verification code"}
+            </button>
+          </form>
+
+          {error && <p role="alert">{error}</p>}
+        </section>
+      )}
+
+      {!isLoading && !getAuthToken() && verificationStep === "otp" && (
+        <section className="empty-state">
+          <h2>Verify your email address</h2>
+          <p>
+            Enter the six-digit code we sent to <strong>{email}</strong>. The
+            code expires after five minutes.
+          </p>
+
+          <form onSubmit={handleVerifyOtp}>
+            <label htmlFor="guest-booking-otp">Verification code</label>
+            <input
+              id="guest-booking-otp"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]{6}"
+              maxLength={6}
+              value={otp}
+              onChange={(event) =>
+                setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              placeholder="Enter six-digit code"
+              autoComplete="one-time-code"
+              required
+            />
+
+            <button type="submit" disabled={isVerifyingOtp}>
+              {isVerifyingOtp ? "Verifying..." : "Verify and view bookings"}
+            </button>
+          </form>
+
+          {message && <p role="status">{message}</p>}
+          {error && <p role="alert">{error}</p>}
+
+          <button type="button" onClick={handleChangeEmail}>
+            Use a different email address
+          </button>
+        </section>
+      )}
+
+      {!isLoading && error && verificationStep === "bookings" && (
         <section className="empty-state">
           <h2>Unable to load bookings</h2>
           <p>{error}</p>
+
+          {!getAuthToken() && (
+            <button type="button" onClick={handleChangeEmail}>
+              Verify email again
+            </button>
+          )}
         </section>
       )}
 
-      {!isLoading && !error && bookings.length === 0 && (
-        <section className="empty-state">
-          <h2>Your bookings will appear here</h2>
-          <p>
-            Once you make a reservation, you can find your booking details and
-            status here.
-          </p>
-        </section>
-      )}
+      {!isLoading &&
+        !error &&
+        verificationStep === "bookings" &&
+        bookings.length === 0 && (
+          <section className="empty-state">
+            <h2>Your bookings will appear here</h2>
+            <p>
+              Once you make a reservation, you can find your booking details and
+              status here.
+            </p>
+          </section>
+        )}
 
-      {!isLoading && !error && bookings.length > 0 && (
-        <section className="customer-bookings">
-          <p>
-            You have <strong>{bookings.length}</strong>{" "}
-            {bookings.length === 1 ? "booking" : "bookings"}.
-          </p>
+      {!isLoading &&
+        !error &&
+        verificationStep === "bookings" &&
+        bookings.length > 0 && (
+          <section className="customer-bookings">
+            <p>
+              You have <strong>{bookings.length}</strong>{" "}
+              {bookings.length === 1 ? "booking" : "bookings"}.
+            </p>
 
-          {bookings.map((booking) => (
-            <article className="booking-card" key={booking.id}>
-              <div className="booking-card-heading">
-                <div>
-                  <p className="eyebrow">BOOKING REFERENCE</p>
-                  <h2>{booking.booking_reference}</h2>
+            {bookings.map((booking) => (
+              <article className="booking-card" key={booking.id}>
+                <div className="booking-card-heading">
+                  <div>
+                    <p className="eyebrow">BOOKING REFERENCE</p>
+                    <h2>{booking.booking_reference}</h2>
+                  </div>
+
+                  <span className="booking-status">
+                    {formatStatus(booking.booking_status)}
+                  </span>
                 </div>
 
-                <span className="booking-status">
-                  {formatStatus(booking.booking_status)}
-                </span>
-              </div>
+                <div className="booking-card-details">
+                  <p>
+                    Branch: <strong>{booking.branch_name}</strong>
+                  </p>
 
-              <div className="booking-card-details">
-                <p>
-                  Branch: <strong>{booking.branch_name}</strong>
-                </p>
+                  <p>
+                    Room type: <strong>{booking.room_type_name}</strong>
+                  </p>
 
-                <p>
-                  Room type: <strong>{booking.room_type_name}</strong>
-                </p>
+                  <p>
+                    Check-in: <strong>{formatDate(booking.check_in)}</strong>
+                  </p>
 
-                <p>
-                  Check-in: <strong>{formatDate(booking.check_in)}</strong>
-                </p>
+                  <p>
+                    Check-out: <strong>{formatDate(booking.check_out)}</strong>
+                  </p>
 
-                <p>
-                  Check-out: <strong>{formatDate(booking.check_out)}</strong>
-                </p>
+                  <p>
+                    Number of nights: <strong>{booking.nights}</strong>
+                  </p>
 
-                <p>
-                  Number of nights: <strong>{booking.nights}</strong>
-                </p>
+                  <p>
+                    Adults: <strong>{booking.adults}</strong>
+                  </p>
 
-                <p>
-                  Adults: <strong>{booking.adults}</strong>
-                </p>
+                  <p>
+                    Children: <strong>{booking.children}</strong>
+                  </p>
 
-                <p>
-                  Children: <strong>{booking.children}</strong>
-                </p>
+                  <p>
+                    Nightly price:{" "}
+                    <strong>
+                      {formatCurrency(booking.nightly_price, booking.currency)}
+                    </strong>
+                  </p>
 
-                <p>
-                  Nightly price:{" "}
-                  <strong>
-                    {formatCurrency(booking.nightly_price, booking.currency)}
-                  </strong>
-                </p>
+                  <p>
+                    Total amount:{" "}
+                    <strong>
+                      {formatCurrency(booking.total_amount, booking.currency)}
+                    </strong>
+                  </p>
 
-                <p>
-                  Total amount:{" "}
-                  <strong>
-                    {formatCurrency(booking.total_amount, booking.currency)}
-                  </strong>
-                </p>
+                  <p>
+                    Payment status:{" "}
+                    <strong>{formatStatus(booking.payment_status)}</strong>
+                  </p>
+                </div>
+              </article>
+            ))}
 
-                <p>
-                  Payment status:{" "}
-                  <strong>{formatStatus(booking.payment_status)}</strong>
-                </p>
-              </div>
-            </article>
-          ))}
-        </section>
-      )}
+            {!getAuthToken() && (
+              <button type="button" onClick={handleChangeEmail}>
+                Sign out of guest bookings
+              </button>
+            )}
+          </section>
+        )}
     </main>
   );
 }

@@ -81,6 +81,46 @@ LittleSpace Hotel
   });
 }
 
+export async function sendGuestBookingOtpEmail(
+  guestEmail: string,
+  otp: string,
+  expiryMinutes = 5,
+): Promise<void> {
+  await emailTransporter.sendMail({
+    from: {
+      name: "LittleSpace Hotel",
+      address: process.env.SMTP_USER!,
+    },
+    to: guestEmail,
+    subject: "Your LittleSpace booking access code",
+    text: `
+Your LittleSpace Hotel verification code is: ${otp}
+
+Enter this code on the My Bookings page to access your bookings.
+
+This code expires in ${expiryMinutes} minutes.
+
+If you did not request this code, you can ignore this email.
+
+Kind regards,
+LittleSpace Hotel
+    `.trim(),
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; color: #333;">
+        <h2>LittleSpace Hotel</h2>
+        <h3>My Bookings Verification</h3>
+        <p>Use the verification code below to access your bookings:</p>
+        <div style="font-size: 28px; font-weight: bold; letter-spacing: 8px; padding: 16px; background: #f3f3f3; text-align: center;">
+          ${escapeHtml(otp)}
+        </div>
+        <p>This code expires in <strong>${expiryMinutes} minutes</strong>.</p>
+        <p>If you did not request this code, you can ignore this email.</p>
+        <p>Kind regards,<br />LittleSpace Hotel</p>
+      </div>
+    `,
+  });
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => {
     const entities: Record<string, string> = {

@@ -21,18 +21,24 @@ function isValidDate(value: unknown): value is string {
 }
 
 // GET /api/bookings
-// Retrieve bookings belonging to a signed-in customer or guest.
+// Retrieve bookings belonging to a signed-in customer.
+// Guests must use the OTP-protected guest booking access route.
 router.get(
   "/",
   optionalAuthenticateGuest,
   async (req: AuthenticatedGuestRequest, res) => {
     try {
-      let query;
-      let values: unknown[];
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message:
+            "Please sign in or verify your email to access your bookings.",
+        });
+        return;
+      }
 
-      if (req.user) {
-        // Signed-in customers can only retrieve their own bookings.
-        query = `
+      const result = await pool.query(
+        `
           SELECT
             b.id,
             b.booking_reference,
@@ -66,70 +72,9 @@ router.get(
           ) p ON TRUE
           WHERE b.user_id = $1
           ORDER BY b.created_at DESC
-        `;
-
-        values = [req.user.id];
-      } else {
-        // Guests must provide the email address used during checkout.
-        const guestEmail =
-          typeof req.query.guestEmail === "string"
-            ? req.query.guestEmail.trim().toLowerCase()
-            : "";
-
-        if (
-          !guestEmail ||
-          guestEmail.length > 255 ||
-          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)
-        ) {
-          res.status(400).json({
-            success: false,
-            message: "A valid guest email address is required.",
-          });
-          return;
-        }
-
-        // Guests can only retrieve guest bookings matching their email.
-        query = `
-          SELECT
-            b.id,
-            b.booking_reference,
-            b.check_in::text AS check_in,
-            b.check_out::text AS check_out,
-            (b.check_out - b.check_in)::integer AS nights,
-            b.adults,
-            b.children,
-            b.status AS booking_status,
-            b.total_amount,
-            b.currency,
-            b.created_at,
-            b.guest_full_name,
-            b.guest_email,
-            b.guest_phone,
-            hb.name AS branch_name,
-            rt.name AS room_type_name,
-            br.nightly_price,
-            COALESCE(p.status, 'not_started') AS payment_status
-          FROM bookings b
-          INNER JOIN booking_rooms br ON br.booking_id = b.id
-          INNER JOIN rooms r ON r.id = br.room_id
-          INNER JOIN room_types rt ON rt.id = r.room_type_id
-          INNER JOIN hotel_branches hb ON hb.id = rt.branch_id
-          LEFT JOIN LATERAL (
-            SELECT status
-            FROM payments
-            WHERE booking_id = b.id
-            ORDER BY created_at DESC, id DESC
-            LIMIT 1
-          ) p ON TRUE
-          WHERE b.user_id IS NULL
-            AND LOWER(b.guest_email) = $1
-          ORDER BY b.created_at DESC
-        `;
-
-        values = [guestEmail];
-      }
-
-      const result = await pool.query(query, values);
+        `,
+        [req.user.id],
+      );
 
       res.status(200).json({
         success: true,
@@ -148,6 +93,7 @@ router.get(
 );
 
 // POST /api/bookings
+// Create a booking for a signed-in customer or guest.
 router.post(
   "/",
   optionalAuthenticateGuest,

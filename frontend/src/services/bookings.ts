@@ -64,6 +64,18 @@ type GetBookingsResponse = {
   data: CustomerBooking[];
 };
 
+type GuestOtpResponse = {
+  success: boolean;
+  message: string;
+};
+
+type VerifyGuestOtpResponse = {
+  success: boolean;
+  message: string;
+  accessToken: string;
+  expiresIn: number;
+};
+
 export async function createBooking(
   details: CreateBookingDetails,
 ): Promise<CreatedBooking> {
@@ -74,18 +86,49 @@ export async function createBooking(
   }).then((response) => response.data);
 }
 
-export async function getMyBookings(
-  guestEmail?: string,
-): Promise<CustomerBooking[]> {
-  const token = getAuthToken();
+// Request an OTP for guest booking access.
+export async function requestGuestBookingOtp(
+  email: string,
+): Promise<GuestOtpResponse> {
+  return apiRequest<GuestOtpResponse>("/guest-booking-access/request-otp", {
+    method: "POST",
+    body: { email },
+  });
+}
 
-  const endpoint = token
+// Verify the guest OTP and receive a temporary access token.
+export async function verifyGuestBookingOtp(
+  email: string,
+  otp: string,
+): Promise<VerifyGuestOtpResponse> {
+  return apiRequest<VerifyGuestOtpResponse>(
+    "/guest-booking-access/verify-otp",
+    {
+      method: "POST",
+      body: { email, otp },
+    },
+  );
+}
+
+// Retrieve bookings for either a signed-in customer or an OTP-verified guest.
+export async function getMyBookings(
+  guestAccessToken?: string,
+): Promise<CustomerBooking[]> {
+  const customerToken = getAuthToken();
+
+  const endpoint = customerToken
     ? "/bookings"
-    : `/bookings?guestEmail=${encodeURIComponent(guestEmail ?? "")}`;
+    : "/guest-booking-access/bookings";
+
+  const token = customerToken ?? guestAccessToken;
+
+  if (!token) {
+    throw new Error("Please verify your email to access your bookings.");
+  }
 
   const response = await apiRequest<GetBookingsResponse>(endpoint, {
     method: "GET",
-    token: token ?? undefined,
+    token,
   });
 
   return response.data;
