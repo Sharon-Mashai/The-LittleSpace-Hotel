@@ -41,7 +41,7 @@ type ReviewResponse = {
 export type CreateReviewData = {
   bookingId: number;
   rating: number;
-  comment?: string;
+  comment: string;
 };
 
 export async function getBranchReviews(
@@ -63,10 +63,24 @@ export async function createReview(
     throw new Error("Please sign in to submit a review.");
   }
 
+  if (
+    typeof reviewData.comment !== "string" ||
+    reviewData.comment.trim().length === 0
+  ) {
+    throw new Error("Please write a comment before submitting your review.");
+  }
+
+  if (reviewData.comment.trim().length > 2000) {
+    throw new Error("Your review comment cannot exceed 2000 characters.");
+  }
+
   const response = await apiRequest<ReviewResponse>("/reviews", {
     method: "POST",
     token,
-    body: reviewData,
+    body: {
+      ...reviewData,
+      comment: reviewData.comment.trim(),
+    },
   });
 
   return response.data;
@@ -74,7 +88,7 @@ export async function createReview(
 
 export async function updateReview(
   reviewId: number,
-  updates: { rating?: number; comment?: string | null },
+  updates: { rating?: number; comment?: string },
 ): Promise<HotelReview> {
   const token = getAuthToken();
 
@@ -82,10 +96,25 @@ export async function updateReview(
     throw new Error("Please sign in to edit a review.");
   }
 
+  if (
+    updates.comment !== undefined &&
+    (updates.comment.trim().length === 0 ||
+      updates.comment.trim().length > 2000)
+  ) {
+    throw new Error(
+      "Your review comment must contain text and cannot exceed 2000 characters.",
+    );
+  }
+
   const response = await apiRequest<ReviewResponse>(`/reviews/${reviewId}`, {
     method: "PATCH",
     token,
-    body: updates,
+    body: {
+      ...updates,
+      ...(updates.comment !== undefined
+        ? { comment: updates.comment.trim() }
+        : {}),
+    },
   });
 
   return response.data;

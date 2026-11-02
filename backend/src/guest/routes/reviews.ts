@@ -1,6 +1,9 @@
 import { Router, type Response } from "express";
 import { pool } from "../../config/db.js";
-import { authenticateGuest, type AuthenticatedGuestRequest,} from "../middleware/auth.js";
+import {
+  authenticateGuest,
+  type AuthenticatedGuestRequest,
+} from "../middleware/auth.js";
 
 const router = Router();
 
@@ -20,8 +23,8 @@ router.get("/branch/:branchId", async (req, res: Response): Promise<void> => {
 
     const branchResult = await pool.query(
       `SELECT id, name
-         FROM hotel_branches
-         WHERE id = $1 AND is_active = TRUE`,
+       FROM hotel_branches
+       WHERE id = $1 AND is_active = TRUE`,
       [branchId],
     );
 
@@ -35,27 +38,27 @@ router.get("/branch/:branchId", async (req, res: Response): Promise<void> => {
 
     const result = await pool.query(
       `SELECT
-           r.id,
-           r.branch_id,
-           r.booking_id,
-           r.rating,
-           r.comment,
-           r.created_at,
-           r.updated_at,
-           u.full_name AS reviewer_name
-         FROM reviews r
-         INNER JOIN users u ON u.id = r.user_id
-         WHERE r.branch_id = $1
-         ORDER BY r.created_at DESC`,
+         r.id,
+         r.branch_id,
+         r.booking_id,
+         r.rating,
+         r.comment,
+         r.created_at,
+         r.updated_at,
+         u.full_name AS reviewer_name
+       FROM reviews r
+       INNER JOIN users u ON u.id = r.user_id
+       WHERE r.branch_id = $1
+       ORDER BY r.created_at DESC`,
       [branchId],
     );
 
     const ratingResult = await pool.query(
       `SELECT
-           COUNT(*)::integer AS review_count,
-           COALESCE(ROUND(AVG(rating)::numeric, 1), 0) AS average_rating
-         FROM reviews
-         WHERE branch_id = $1`,
+         COUNT(*)::integer AS review_count,
+         COALESCE(ROUND(AVG(rating)::numeric, 1), 0) AS average_rating
+       FROM reviews
+       WHERE branch_id = $1`,
       [branchId],
     );
 
@@ -99,14 +102,14 @@ router.post(
         !Number.isInteger(rating) ||
         rating < 1 ||
         rating > 5 ||
-        (comment !== undefined &&
-          comment !== null &&
-          (typeof comment !== "string" || comment.trim().length > 2000))
+        typeof comment !== "string" ||
+        comment.trim().length === 0 ||
+        comment.trim().length > 2000
       ) {
         res.status(400).json({
           success: false,
           message:
-            "Provide a valid booking ID, a rating from 1 to 5, and an optional comment of up to 2000 characters.",
+            "Provide a valid booking ID, a rating from 1 to 5, and a written comment of up to 2000 characters.",
         });
         return;
       }
@@ -169,13 +172,7 @@ router.post(
          VALUES ($1, $2, $3, $4, $5)
          RETURNING id, user_id, branch_id, booking_id, rating, comment,
                    created_at, updated_at`,
-        [
-          userId,
-          branchId,
-          String(bookingId),
-          rating,
-          typeof comment === "string" ? comment.trim() || null : null,
-        ],
+        [userId, branchId, String(bookingId), rating, comment.trim()],
       );
 
       res.status(201).json({
@@ -224,13 +221,14 @@ router.patch(
         (rating !== undefined &&
           (!Number.isInteger(rating) || rating < 1 || rating > 5)) ||
         (comment !== undefined &&
-          comment !== null &&
-          (typeof comment !== "string" || comment.trim().length > 2000))
+          (typeof comment !== "string" ||
+            comment.trim().length === 0 ||
+            comment.trim().length > 2000))
       ) {
         res.status(400).json({
           success: false,
           message:
-            "Provide a valid review ID and a rating from 1 to 5 and/or a comment of up to 2000 characters.",
+            "Provide a valid review ID, a rating from 1 to 5 and/or a written comment of up to 2000 characters.",
         });
         return;
       }
@@ -250,7 +248,7 @@ router.patch(
         [
           rating === undefined ? null : rating,
           comment !== undefined,
-          typeof comment === "string" ? comment.trim() || null : null,
+          comment === undefined ? null : comment.trim(),
           reviewId,
           userId,
         ],

@@ -141,8 +141,6 @@ function HotelDetailsPage() {
 
   // Only signed-in guests can load their booking history for review eligibility.
   useEffect(() => {
-    // Do not make a booking-history request when there is no signed-in guest.
-    // bookingHistory already starts as an empty array.
     if (!branch || !getAuthToken()) {
       return;
     }
@@ -324,27 +322,51 @@ function HotelDetailsPage() {
       return;
     }
 
+    if (reviewComment.trim().length > 2000) {
+      setReviewSubmitError(
+        "Your review comment cannot exceed 2000 characters.",
+      );
+      return;
+    }
+
     try {
       setSubmittingReview(true);
       setReviewSubmitError("");
       setReviewSubmitSuccess("");
+      setReviewLoadError("");
 
+      // Submit the review first.
       await createReview({
         bookingId: Number(reviewBookingId),
         rating: reviewRating,
         comment: reviewComment.trim(),
       });
 
-      const updatedReviews = await getBranchReviews(branch.id);
-      setReviewData(updatedReviews);
-
-      const updatedBookings = await getBookingHistory();
-      setBookingHistory(updatedBookings);
-
+      // The review has been saved successfully.
+      // Show success before attempting any additional refresh requests.
       setReviewBookingId("");
       setReviewRating(5);
       setReviewComment("");
       setReviewSubmitSuccess("Your review has been submitted successfully.");
+
+      // Refresh public reviews independently.
+      try {
+        const updatedReviews = await getBranchReviews(branch.id);
+        setReviewData(updatedReviews);
+      } catch {
+        setReviewLoadError(
+          "Your review was submitted successfully, but we could not refresh the review list. Please reload the page.",
+        );
+      }
+
+      // Refresh booking history independently.
+      try {
+        const updatedBookings = await getBookingHistory();
+        setBookingHistory(updatedBookings);
+      } catch {
+        // The successful review submission should not be treated as a failure.
+        // The page can retrieve booking history again when it is reloaded.
+      }
     } catch (err) {
       setReviewSubmitError(
         err instanceof Error
@@ -584,6 +606,7 @@ function HotelDetailsPage() {
                 value={reviewComment}
                 onChange={(event) => setReviewComment(event.target.value)}
                 rows={5}
+                maxLength={2000}
                 placeholder="Tell us about your stay at this branch..."
                 required
               />
