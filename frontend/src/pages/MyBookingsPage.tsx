@@ -55,6 +55,7 @@ function MyBookingsPage() {
         setIsLoading(false);
         return;
       }
+      setVerificationStep("bookings");
 
       try {
         setIsLoading(true);

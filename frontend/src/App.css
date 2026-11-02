@@ -1490,3 +1490,679 @@ img {
   cursor: not-allowed;
   opacity: 0.7;
 }
+
+/* =========================================
+   LITTLESPACE HOTEL DETAILS PAGE
+========================================= */
+
+/* Main page layout */
+.account-page:has(.hotel-reviews-section) {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 30px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 65px 8%;
+}
+
+/* Branch introduction */
+.account-page:has(.hotel-reviews-section) > .account-page-heading {
+  max-width: 100%;
+  margin: 0;
+  padding: 20px 0 10px;
+  text-align: left;
+}
+
+.account-page:has(.hotel-reviews-section) > .account-page-heading .eyebrow {
+  margin-bottom: 12px;
+}
+
+.account-page:has(.hotel-reviews-section) > .account-page-heading h1 {
+  font-size: clamp(38px, 5vw, 54px);
+}
+
+.account-page:has(.hotel-reviews-section) > .account-page-heading > p:not(.eyebrow) {
+  margin: 10px 0 0;
+}
+
+/* About this branch card */
+.account-page:has(.hotel-reviews-section) > .empty-state:not(.review-form-section) {
+  max-width: 100%;
+  padding: 32px 38px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-bg);
+  box-shadow: 0 5px 20px rgba(40, 30, 20, 0.035);
+  text-align: left;
+}
+
+.account-page:has(.hotel-reviews-section) > .empty-state:not(.review-form-section) h2 {
+  margin: 0 0 18px;
+  font-size: 27px;
+}
+
+.account-page:has(.hotel-reviews-section) > .empty-state:not(.review-form-section) p {
+  max-width: none;
+  margin: 10px 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+/* Section headings */
+.hotel-reviews-section {
+  width: 100%;
+  margin: 10px 0;
+}
+
+.hotel-reviews-section > .account-page-heading {
+  max-width: 100%;
+  margin: 0 0 25px;
+  text-align: left;
+}
+
+.hotel-reviews-section > .account-page-heading h2,
+.account-page:has(.hotel-reviews-section) > .account-page-heading h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 32px;
+  font-weight: 400;
+}
+
+.hotel-reviews-section > .account-page-heading > p:not(.eyebrow) {
+  margin: 8px 0 0;
+}
+
+/* Reviews layout */
+.hotel-reviews-layout {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1.8fr);
+  gap: 25px;
+  align-items: start;
+  width: 100%;
+}
+
+/* Overall rating card */
+.review-summary {
+  padding: 30px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f4f0e9;
+}
+
+.review-summary h3,
+.review-list > h3 {
+  margin: 0 0 22px;
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 400;
+}
+
+.review-average {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--serif);
+  font-size: 55px;
+  line-height: 1;
+}
+
+.review-average span {
+  margin-left: 5px;
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+}
+
+.review-stars {
+  margin: 13px 0;
+  color: #a77b35;
+  font-size: 22px;
+  letter-spacing: 3px;
+}
+
+.review-summary > p:not(.review-average):not(.review-stars) {
+  margin: 10px 0 25px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Rating breakdown */
+.rating-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+
+.rating-breakdown-row {
+  display: grid;
+  grid-template-columns: 55px minmax(0, 1fr) 22px;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.rating-breakdown-track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #e3ddd4;
+}
+
+.rating-breakdown-fill {
+  height: 100%;
+  border-radius: 20px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+/* Guest review list */
+.review-list {
+  min-width: 0;
+  padding: 30px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-bg);
+}
+
+.review-list > h3 {
+  margin-bottom: 20px;
+}
+
+.review-card {
+  padding: 22px 0;
+  border-top: 1px solid var(--border);
+}
+
+.review-card:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.review-card:last-child {
+  padding-bottom: 0;
+}
+
+.review-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 12px;
+}
+
+.review-card-heading h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.review-card-heading p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.review-card-rating {
+  flex-shrink: 0;
+  color: #a77b35;
+  font-size: 15px;
+  letter-spacing: 2px;
+}
+
+.review-card > p {
+  margin: 0;
+  color: #625d55;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+/* Review form */
+.review-form-section {
+  width: 100%;
+  max-width: 100%;
+  padding: 35px 38px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-bg);
+  box-shadow: 0 5px 20px rgba(40, 30, 20, 0.035);
+  text-align: left;
+}
+
+.review-form-section h2 {
+  margin: 0 0 10px;
+  font-family: var(--serif);
+  font-size: 30px;
+  font-weight: 400;
+}
+
+.review-form-section > p {
+  max-width: 650px;
+  margin: 0 0 22px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.review-form-section form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  max-width: 850px;
+}
+
+.review-form-section form > div {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.review-form-section form > div:last-of-type {
+  grid-column: 1 / -1;
+}
+
+.review-form-section label,
+.account-page:has(.hotel-reviews-section) > .empty-state form label {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.review-form-section input,
+.review-form-section select,
+.review-form-section textarea,
+.account-page:has(.hotel-reviews-section) > .empty-state form input,
+.account-page:has(.hotel-reviews-section) > .empty-state form select,
+.account-page:has(.hotel-reviews-section) > .empty-state form textarea {
+  width: 100%;
+  min-height: 47px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.review-form-section textarea,
+.account-page:has(.hotel-reviews-section) > .empty-state form textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.review-form-section input:focus,
+.review-form-section select:focus,
+.review-form-section textarea:focus,
+.account-page:has(.hotel-reviews-section) > .empty-state form input:focus,
+.account-page:has(.hotel-reviews-section) > .empty-state form select:focus,
+.account-page:has(.hotel-reviews-section) > .empty-state form textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(112, 91, 71, 0.1);
+}
+
+.review-form-section form > button {
+  justify-self: start;
+}
+
+.review-form-section [role="alert"] {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #b42318;
+  font-size: 13px;
+}
+
+.review-form-section [role="status"] {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #287447;
+  font-size: 13px;
+}
+
+.review-form-section a {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* Room types */
+.account-page:has(.hotel-reviews-section) > .account-page-heading:has(h2) {
+  max-width: 100%;
+  margin: 15px 0 0;
+  text-align: left;
+}
+
+.account-page:has(.hotel-reviews-section) > .account-page-heading:has(h2) h2 {
+  margin: 0;
+}
+
+.account-page:has(.hotel-reviews-section) > .favourites-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  width: 100%;
+}
+
+.account-page:has(.hotel-reviews-section) .favourite-card {
+  padding: 27px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-bg);
+  box-shadow: 0 5px 20px rgba(40, 30, 20, 0.035);
+}
+
+.account-page:has(.hotel-reviews-section) .favourite-card h3 {
+  margin: 0 0 12px;
+  font-family: var(--serif);
+  font-size: 25px;
+  font-weight: 400;
+}
+
+.account-page:has(.hotel-reviews-section) .favourite-card p {
+  margin: 9px 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* Availability and booking forms */
+.account-page:has(.hotel-reviews-section) > .empty-state form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  width: 100%;
+  text-align: left;
+}
+
+.account-page:has(.hotel-reviews-section) > .empty-state form > div {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.account-page:has(.hotel-reviews-section) > .empty-state form > button {
+  justify-self: start;
+}
+
+.account-page:has(.hotel-reviews-section) > .empty-state form [role="alert"] {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #b42318;
+  font-size: 13px;
+}
+
+/* Availability results */
+.account-page:has(.hotel-reviews-section) > section > .favourites-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  width: 100%;
+}
+
+/* Back to hotels link */
+.account-page:has(.hotel-reviews-section) > p:last-child {
+  width: 100%;
+  margin: 5px 0 0;
+}
+
+.account-page:has(.hotel-reviews-section) > p:last-child a {
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.account-page:has(.hotel-reviews-section) > p:last-child a:hover {
+  text-decoration: underline;
+}
+
+/* =========================================
+   HOTEL DETAILS RESPONSIVE STYLING
+========================================= */
+
+@media (max-width: 850px) {
+  .account-page:has(.hotel-reviews-section) {
+    padding: 50px 5%;
+  }
+
+  .hotel-reviews-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .review-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 10px 20px;
+  }
+
+  .review-summary h3 {
+    grid-column: 1 / -1;
+    margin-bottom: 5px;
+  }
+
+  .review-summary > p:not(.review-average):not(.review-stars) {
+    margin: 0;
+  }
+
+  .rating-breakdown {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .account-page:has(.hotel-reviews-section) {
+    gap: 22px;
+    padding: 35px 5%;
+  }
+
+  .account-page:has(.hotel-reviews-section) > .account-page-heading h1 {
+    font-size: 37px;
+  }
+
+  .account-page:has(.hotel-reviews-section) > .empty-state:not(.review-form-section) {
+    padding: 25px 22px;
+  }
+
+  .hotel-reviews-section > .account-page-heading h2,
+  .account-page:has(.hotel-reviews-section) > .account-page-heading h2 {
+    font-size: 27px;
+  }
+
+  .review-summary,
+  .review-list {
+    padding: 23px 20px;
+  }
+
+  .review-form-section {
+    padding: 27px 22px;
+  }
+
+  .review-form-section form,
+  .account-page:has(.hotel-reviews-section) > .empty-state form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .review-form-section form > div:last-of-type {
+    grid-column: auto;
+  }
+
+  .account-page:has(.hotel-reviews-section) > .favourites-list,
+  .account-page:has(.hotel-reviews-section) > section > .favourites-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .review-summary {
+    display: block;
+  }
+
+  .review-summary > p:not(.review-average):not(.review-stars) {
+    margin: 10px 0 22px;
+  }
+
+  .review-card-heading {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+/* ========================================
+   MY BOOKINGS PAGE
+======================================== */
+
+.account-page:has(.customer-bookings) {
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 65px 4%;
+  gap: 30px;
+}
+
+.account-page:has(.customer-bookings) .account-page-heading {
+  width: 100%;
+  text-align: center;
+  padding-bottom: 30px;
+  border-bottom: 1px solid var(--border);
+}
+
+.account-page:has(.customer-bookings) .account-page-heading h1 {
+  font-family: Georgia, serif;
+  font-size: clamp(42px, 5vw, 64px);
+  margin: 12px 0;
+}
+
+.customer-bookings {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.customer-bookings > p {
+  text-align: center;
+  font-family: Georgia, serif;
+  font-size: 23px;
+  margin: 0 0 2px;
+}
+
+.booking-card {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.1fr) 1.5fr 1fr;
+  gap: 30px;
+  align-items: center;
+  width: 100%;
+  padding: 28px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  box-shadow: 0 5px 18px rgba(55, 42, 28, 0.05);
+}
+
+.booking-card-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.booking-card-heading .eyebrow {
+  margin: 0 0 5px;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+}
+
+.booking-card-heading h2 {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-size: 23px;
+  overflow-wrap: anywhere;
+}
+
+.booking-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 15px;
+  border-radius: 30px;
+  background: #e4f2e3;
+  color: #276b32;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.booking-card-details {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  padding: 5px 25px;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.booking-card-details p {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.booking-card-details strong {
+  color: var(--text);
+  text-align: right;
+  font-weight: 500;
+}
+
+.booking-card-details p:nth-child(7) {
+  margin-top: 10px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border);
+}
+
+.booking-card-details p:nth-child(8) {
+  font-size: 16px;
+}
+
+.booking-card-details p:last-child strong {
+  color: #276b32;
+}
+
+@media (max-width: 950px) {
+  .booking-card {
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+  }
+
+  .booking-card-details {
+    grid-column: 1 / -1;
+    border: none;
+    border-top: 1px solid var(--border);
+    padding: 20px 0 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .account-page:has(.customer-bookings) {
+    padding: 40px 5%;
+  }
+
+  .booking-card {
+    grid-template-columns: 1fr;
+    padding: 22px;
+  }
+
+  .booking-card-details {
+    grid-column: auto;
+  }
+
+  .booking-card-details p {
+    font-size: 14px;
+  }
+
+  .booking-card-heading h2 {
+    font-size: 19px;
+  }
+}
