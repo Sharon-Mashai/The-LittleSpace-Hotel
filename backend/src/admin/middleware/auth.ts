@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { pool } from "../../config/db.js";
+import type { AdminPermission } from "../routes/permissions.js";
 
 export type AdminRole = "admin" | "super_admin";
 
@@ -94,7 +95,7 @@ export async function authenticateAdmin(
       role: user.role as AdminRole,
     };
 
-    next();
+    return next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return res.status(401).json({
@@ -124,5 +125,55 @@ export function requireSuperAdmin(
     });
   }
 
-  next();
+  return next();
+}
+
+export function requirePermission(permission: AdminPermission) {
+  return async (
+    req: AuthenticatedAdminRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: "Authentication is required.",
+        });
+      }
+
+      // Super Admins have unrestricted access.
+      if (req.user.role === "super_admin") {
+        return next();
+      }
+
+      const result = await pool.query(
+        `
+          SELECT 1
+          FROM admin_permissions
+          WHERE user_id = $1
+            AND permission = $2
+          LIMIT 1
+        `,
+        [req.user.id, permission],
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: "You do not have permission to perform this action.",
+          requiredPermission: permission,
+        });
+      }
+
+      return next();
+    } catch (error) {
+      console.error("Admin permission verification error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to verify administrator permissions.",
+      });
+    }
+  };
 }
