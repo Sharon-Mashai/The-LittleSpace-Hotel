@@ -1,12 +1,19 @@
 import { Router } from "express";
 import { pool } from "../../config/db.js";
-import { authenticateAdmin, type AuthenticatedAdminRequest,} from "../middleware/auth.js";
+import {
+  authenticateAdmin,
+  requirePermission,
+  type AuthenticatedAdminRequest,
+} from "../middleware/auth.js";
 
 const router = Router();
 
 // GET /api/admin/branches
 // View all branches, including inactive branches.
-router.get( "/", authenticateAdmin,
+router.get(
+  "/",
+  authenticateAdmin,
+  requirePermission("branches.view"),
   async (_req: AuthenticatedAdminRequest, res) => {
     try {
       const result = await pool.query(
@@ -54,6 +61,7 @@ router.get( "/", authenticateAdmin,
 router.post(
   "/",
   authenticateAdmin,
+  requirePermission("branches.create"),
   async (req: AuthenticatedAdminRequest, res) => {
     const {
       name,
@@ -205,6 +213,7 @@ router.post(
 router.patch(
   "/:id",
   authenticateAdmin,
+  requirePermission("branches.edit"),
   async (req: AuthenticatedAdminRequest, res) => {
     const branchId = Number(req.params.id);
 
