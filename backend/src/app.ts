@@ -7,7 +7,6 @@ import availabilityRouter from "./guest/routes/availability.js";
 import bookingsRouter from "./guest/routes/bookings.js";
 import paymentsRouter from "./guest/routes/payments.js";
 import authRouter from "./guest/routes/auth.js";
-import adminAuthRouter from "./admin/routes/auth.js";
 import adminBookingsRouter from "./admin/routes/bookings.js";
 import adminBranchesRouter from "./admin/routes/branches.js";
 import favouritesRouter from "./guest/routes/favourites.js";
@@ -61,8 +60,10 @@ app.get("/api/db-health", async (_req, res) => {
   }
 });
 
-// Guest routes
+// Shared authentication route for guests, admins and Super Admin
 app.use("/api/auth", authRouter);
+
+// Guest routes
 app.use("/api/branches", branchesRouter);
 app.use("/api/room-types", roomTypesRouter);
 app.use("/api/availability", availabilityRouter);
@@ -78,13 +79,11 @@ app.use("/api/accommodations", accommodationPhotosRouter);
 app.use("/api/accommodations", accommodationDetailsRouter);
 app.use("/api/guest-booking-access", guestBookingAccessRouter);
 
-// Admin routes
-app.use("/api/admin/auth", adminAuthRouter);
+// Admin functionality routes
 app.use("/api/admin/branches", adminBranchesRouter);
 app.use("/api/admin/bookings", adminBookingsRouter);
 app.use("/api/admin/room-types", adminRoomTypesRouter);
 app.use("/api/admin/dashboard", adminDashboardRouter);
 app.use("/api/admin/guests", adminGuestsRouter);
-
 
 export default app;

@@ -67,7 +67,7 @@ router.post("/register", async (req, res) => {
     const user = result.rows[0];
 
     const token = jwt.sign(
-      { sub: String(user.id), role: "guest" },
+      { sub: String(user.id), role: user.role },
       getJwtSecret(),
       { expiresIn: "1h" },
     );
@@ -100,7 +100,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Log in to an existing guest account
+// Shared login for guests, administrators and the Super Admin
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -135,13 +135,6 @@ router.post("/login", async (req, res) => {
 
     const user = result.rows[0];
 
-    if (user.role !== "guest") {
-      return res.status(403).json({
-        success: false,
-        message: "Please use the appropriate login for your account.",
-      });
-    }
-
     if (!user.is_active || !user.password_hash) {
       return res.status(401).json({
         success: false,
@@ -159,7 +152,10 @@ router.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { sub: String(user.id), role: "guest" },
+      {
+        sub: String(user.id),
+        role: user.role,
+      },
       getJwtSecret(),
       { expiresIn: "1h" },
     );
@@ -178,7 +174,7 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Guest login failed:", error);
+    console.error("Shared login failed:", error);
 
     return res.status(500).json({
       success: false,
