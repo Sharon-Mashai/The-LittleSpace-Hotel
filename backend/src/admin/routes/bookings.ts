@@ -1,14 +1,39 @@
-import { Router } from "express";
+import { Router, type Response, type NextFunction } from "express";
 import { pool } from "../../config/db.js";
-import { authenticateAdmin,type AuthenticatedAdminRequest,} from "../middleware/auth.js";
+import {
+  authenticateAdmin,
+  requirePermission,
+  type AuthenticatedAdminRequest,
+} from "../middleware/auth.js";
 
 const router = Router();
 
+// Select the correct permission according to the requested booking action.
+const requireBookingStatusPermission = (
+  req: AuthenticatedAdminRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  const requestedStatus: unknown = req.body?.status;
+
+  if (requestedStatus === "cancelled") {
+    return requirePermission("bookings.cancel")(req, res, next);
+  }
+
+  if (requestedStatus === "rejected") {
+    return requirePermission("bookings.reject")(req, res, next);
+  }
+
+  // Allow the route handler to return its existing validation error.
+  return next();
+};
+
 // GET /api/admin/bookings
-// Allow authenticated administrators to view bookings.
+// Only administrators with bookings.view can retrieve bookings.
 router.get(
   "/",
   authenticateAdmin,
+  requirePermission("bookings.view"),
   async (_req: AuthenticatedAdminRequest, res) => {
     try {
       const result = await pool.query(
@@ -74,11 +99,12 @@ router.get(
 );
 
 // PATCH /api/admin/bookings/:bookingId/status
-// Allow administrators to cancel or reject eligible reservations.
+// Requires the specific permission for cancellation or rejection.
 // Successful payments are never automatically refunded.
 router.patch(
   "/:bookingId/status",
   authenticateAdmin,
+  requireBookingStatusPermission,
   async (req: AuthenticatedAdminRequest, res) => {
     const bookingId = String(req.params.bookingId);
     const requestedStatus: unknown = req.body?.status;
