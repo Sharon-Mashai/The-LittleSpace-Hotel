@@ -39,6 +39,41 @@ function AdministratorsPage() {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  // Refresh the administrator list manually or after creating an account.
+  const loadAdministrators = useCallback(async () => {
+    const token = getAuthToken();
+
+    if (!token) {
+      setError("Your session has expired. Please sign in again.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+
+      const query = search.trim()
+        ? `?search=${encodeURIComponent(search.trim())}`
+        : "";
+
+      const response = await apiRequest<AdministratorsResponse>(
+        `/admin/administrators${query}`,
+        { token },
+      );
+
+      setAdministrators(response.data);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load administrator accounts.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [search]);
+
   // Load administrator accounts when the page opens or search changes.
   useEffect(() => {
     let cancelled = false;
@@ -90,40 +125,6 @@ function AdministratorsPage() {
     };
   }, [search]);
 
-  // Refresh the administrator list after creating an account.
-  const loadAdministrators = useCallback(async () => {
-    const token = getAuthToken();
-
-    if (!token) {
-      setError("Your session has expired. Please sign in again.");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError("");
-
-      const query = search.trim()
-        ? `?search=${encodeURIComponent(search.trim())}`
-        : "";
-
-      const response = await apiRequest<AdministratorsResponse>(
-        `/admin/administrators${query}`,
-        { token },
-      );
-
-      setAdministrators(response.data);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to load administrator accounts.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [search]);
-
   async function handleCreateAdministrator(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -154,7 +155,6 @@ function AdministratorsPage() {
       );
 
       setSuccessMessage(response.message);
-
       setFullName("");
       setEmail("");
       setPhone("");
@@ -173,124 +173,206 @@ function AdministratorsPage() {
   }
 
   return (
-    <div className="admin-dashboard">
-      <div className="admin-dashboard-header">
-        <h1>Administrator Management</h1>
-        <p>
-          View administrator accounts and create new Admin accounts for
-          LittleSpace Hotel.
-        </p>
+    <div className="admin-management-page">
+      <div className="admin-management-heading">
+        <div>
+          <span className="admin-page-eyebrow">SUPER ADMINISTRATION</span>
+          <h1>Administrator Management</h1>
+          <p>
+            Manage administrator accounts and create new Admin accounts for
+            LittleSpace Hotel.
+          </p>
+        </div>
       </div>
 
       {error && (
-        <p role="alert" className="admin-error">
-          {error}
-        </p>
+        <div role="alert" className="admin-management-message error">
+          <strong>Something went wrong</strong>
+          <span>{error}</span>
+        </div>
       )}
 
       {successMessage && (
-        <p role="status" className="admin-success">
-          {successMessage}
-        </p>
+        <div role="status" className="admin-management-message success">
+          <strong>Success</strong>
+          <span>{successMessage}</span>
+        </div>
       )}
 
-      <section className="admin-section">
-        <h2>Administrator Accounts</h2>
+      <section className="admin-management-card">
+        <div className="admin-card-heading">
+          <div>
+            <span className="admin-card-eyebrow">ACCOUNT DIRECTORY</span>
+            <h2>Administrator Accounts</h2>
+            <p>View and search the administrator accounts in your system.</p>
+          </div>
 
-        <div className="admin-search">
-          <label htmlFor="administrator-search">Search by name or email</label>
+          <span className="admin-account-count">
+            {administrators.length}{" "}
+            {administrators.length === 1 ? "account" : "accounts"}
+          </span>
+        </div>
 
-          <input
-            id="administrator-search"
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Enter a name or email"
-          />
+        <div className="admin-management-toolbar">
+          <div className="admin-management-search">
+            <label htmlFor="administrator-search">Search administrators</label>
+            <input
+              id="administrator-search"
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search by name or email..."
+            />
+          </div>
+
+          <button
+            type="button"
+            className="admin-secondary-button"
+            onClick={() => void loadAdministrators()}
+            disabled={loading}
+          >
+            {loading ? "Refreshing..." : "Refresh list"}
+          </button>
         </div>
 
         {loading ? (
-          <p>Loading administrator accounts...</p>
+          <div className="admin-management-empty">
+            <p>Loading administrator accounts...</p>
+          </div>
         ) : administrators.length === 0 ? (
-          <p>No administrator accounts found.</p>
+          <div className="admin-management-empty">
+            <h3>No administrator accounts found</h3>
+            <p>
+              Try another search or create a new Admin account using the form
+              below.
+            </p>
+          </div>
         ) : (
-          <div className="admin-table-wrapper">
-            <table className="admin-table">
+          <div className="admin-management-table-wrapper">
+            <table className="admin-management-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
+                  <th>Administrator</th>
+                  <th>Contact details</th>
                   <th>Role</th>
-                  <th>Status</th>
+                  <th>Account status</th>
                 </tr>
               </thead>
 
               <tbody>
                 {administrators.map((administrator) => (
                   <tr key={administrator.id}>
-                    <td>{administrator.full_name}</td>
-                    <td>{administrator.email}</td>
-                    <td>{administrator.phone || "Not provided"}</td>
                     <td>
-                      {administrator.role === "super_admin"
-                        ? "Super Admin"
-                        : "Admin"}
+                      <div className="admin-person-cell">
+                        <span className="admin-person-avatar">
+                          {administrator.full_name
+                            .trim()
+                            .charAt(0)
+                            .toUpperCase()}
+                        </span>
+                        <span className="admin-person-name">
+                          {administrator.full_name}
+                        </span>
+                      </div>
                     </td>
-                    <td>{administrator.is_active ? "Active" : "Inactive"}</td>
+
+                    <td>
+                      <div className="admin-contact-cell">
+                        <span>{administrator.email}</span>
+                        <small>
+                          {administrator.phone || "No phone number provided"}
+                        </small>
+                      </div>
+                    </td>
+
+                    <td>
+                      <span
+                        className={`admin-role-label ${
+                          administrator.role === "super_admin"
+                            ? "super-admin"
+                            : "admin"
+                        }`}
+                      >
+                        {administrator.role === "super_admin"
+                          ? "Super Admin"
+                          : "Admin"}
+                      </span>
+                    </td>
+
+                    <td>
+                      <span
+                        className={`admin-account-status ${
+                          administrator.is_active ? "active" : "inactive"
+                        }`}
+                      >
+                        <span className="admin-status-dot" />
+                        {administrator.is_active ? "Active" : "Inactive"}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-
-        <button
-          type="button"
-          onClick={() => void loadAdministrators()}
-          disabled={loading}
-        >
-          Refresh list
-        </button>
       </section>
 
-      <section className="admin-section">
-        <h2>Create Admin Account</h2>
-
-        <form onSubmit={handleCreateAdministrator}>
+      <section className="admin-management-card admin-create-card">
+        <div className="admin-card-heading">
           <div>
+            <span className="admin-card-eyebrow">NEW ACCOUNT</span>
+            <h2>Create Admin Account</h2>
+            <p>
+              Add a new administrator who can access the management portal. You
+              can assign their individual permissions separately.
+            </p>
+          </div>
+        </div>
+
+        <form
+          className="admin-create-form"
+          onSubmit={handleCreateAdministrator}
+        >
+          <div className="admin-form-field">
             <label htmlFor="admin-full-name">Full name</label>
             <input
               id="admin-full-name"
               type="text"
               value={fullName}
               onChange={(event) => setFullName(event.target.value)}
+              placeholder="Enter the administrator's full name"
+              autoComplete="name"
               required
             />
           </div>
 
-          <div>
+          <div className="admin-form-field">
             <label htmlFor="admin-email">Email address</label>
             <input
               id="admin-email"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
+              placeholder="name@example.com"
+              autoComplete="email"
               required
             />
           </div>
 
-          <div>
-            <label htmlFor="admin-phone">Phone number (optional)</label>
+          <div className="admin-form-field">
+            <label htmlFor="admin-phone">Phone number</label>
             <input
               id="admin-phone"
               type="tel"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
+              placeholder="Enter phone number (optional)"
+              autoComplete="tel"
             />
+            <small>Optional</small>
           </div>
 
-          <div>
+          <div className="admin-form-field">
             <label htmlFor="admin-password">Temporary password</label>
             <input
               id="admin-password"
@@ -298,6 +380,9 @@ function AdministratorsPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               minLength={8}
+              maxLength={72}
+              autoComplete="new-password"
+              placeholder="Create a temporary password"
               required
             />
             <small>
@@ -306,9 +391,20 @@ function AdministratorsPage() {
             </small>
           </div>
 
-          <button type="submit" disabled={creating}>
-            {creating ? "Creating account..." : "Create Admin Account"}
-          </button>
+          <div className="admin-form-footer">
+            <p>
+              The new administrator's permissions can be configured after the
+              account has been created.
+            </p>
+
+            <button
+              type="submit"
+              className="admin-primary-button"
+              disabled={creating}
+            >
+              {creating ? "Creating account..." : "Create Admin Account"}
+            </button>
+          </div>
         </form>
       </section>
     </div>
