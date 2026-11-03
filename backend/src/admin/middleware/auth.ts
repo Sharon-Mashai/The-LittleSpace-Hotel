@@ -1,114 +1,113 @@
 import type { Request, Response, NextFunction } from "express";
-import jwt, { type JwtPayload } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import { pool } from "../../config/db.js";
+
+export type AdminRole = "admin" | "super_admin";
 
 export interface AuthenticatedAdminRequest extends Request {
   user?: {
     id: string;
-    role: "admin";
+    role: AdminRole;
   };
 }
 
-interface AdminTokenPayload extends JwtPayload {
+interface AdminTokenPayload {
   sub: string;
-  role: "admin";
+  role: AdminRole;
 }
 
 export async function authenticateAdmin(
   req: AuthenticatedAdminRequest,
   res: Response,
   next: NextFunction,
-): Promise<void> {
+) {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader) {
-      res.status(401).json({
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
         success: false,
         message: "Authentication token is required.",
       });
-      return;
     }
 
-    if (!authHeader.startsWith("Bearer ") || !authHeader.slice(7).trim()) {
-      res.status(401).json({
+    const token = authHeader.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({
         success: false,
-        message: "Invalid authorization header.",
+        message: "Authentication token is missing.",
       });
-      return;
     }
 
-    const token = authHeader.slice(7).trim();
     const secret = process.env.JWT_SECRET;
 
     if (!secret) {
-      console.error("JWT_SECRET is not configured.");
-
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
-        message: "Authentication service is not configured.",
+        message: "Server authentication is not configured.",
       });
-      return;
     }
 
-    let decoded: string | JwtPayload;
-
-    try {
-      decoded = jwt.verify(token, secret);
-    } catch {
-      res.status(401).json({
-        success: false,
-        message: "Invalid or expired authentication token.",
-      });
-      return;
-    }
+    const decoded = jwt.verify(token, secret) as AdminTokenPayload;
 
     if (
-      typeof decoded === "string" ||
-      typeof decoded.sub !== "string" ||
-      decoded.role !== "admin"
+      !decoded.sub ||
+      (decoded.role !== "admin" && decoded.role !== "super_admin")
     ) {
-      res.status(403).json({
+      return res.status(403).json({
         success: false,
-        message: "Administrator privileges are required.",
+        message: "You do not have permission to access this resource.",
       });
-      return;
     }
-
-    const payload = decoded as AdminTokenPayload;
 
     const result = await pool.query(
       `SELECT id, role, is_active
        FROM users
        WHERE id = $1`,
-      [payload.sub],
+      [decoded.sub],
     );
 
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: "User account was not found.",
+      });
+    }
+
+    const user = result.rows[0];
+
     if (
-      result.rows.length === 0 ||
-      !result.rows[0].is_active ||
-      result.rows[0].role !== "admin"
+      !user.is_active ||
+      (user.role !== "admin" && user.role !== "super_admin") ||
+      user.role !== decoded.role
     ) {
-      res.status(401).json({
+      return res.status(403).json({
         success: false,
         message:
-          "Administrator account not found, inactive, or no longer valid.",
+          "Your account does not have permission to access this resource.",
       });
-      return;
     }
 
     req.user = {
-      id: String(result.rows[0].id),
-      role: "admin",
+      id: String(user.id),
+      role: user.role as AdminRole,
     };
 
     next();
   } catch (error) {
-    console.error("Admin authentication middleware failed:", error);
+    if (error instanceof jwt.JsonWebTokenError) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired authentication token.",
+      });
+    }
 
-    res.status(500).json({
+    console.error("Admin authentication error:", error);
+
+    return res.status(500).json({
       success: false,
-      message: "Administrator authentication failed.",
+      message: "An error occurred during authentication.",
     });
   }
 }
