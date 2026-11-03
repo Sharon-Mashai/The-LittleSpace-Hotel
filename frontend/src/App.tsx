@@ -17,6 +17,7 @@ import HotelDetailsPage from "./pages/guest/HotelDetailsPage";
 import BookingConfirmationPage from "./pages/guest/BookingConfirmationPage";
 import PaymentConfirmationPage from "./pages/guest/PaymentConfirmationPage";
 import AdminDashboardPage from "./pages/Admin/AdminDashboardPage";
+import BookingsPage from "./pages/Admin/BookingsPage";
 import SuperAdminDashboardPage from "./pages/super-admin/SuperAdminDashboardPage";
 import AdministratorsPage from "./pages/super-admin/AdministratorsPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -83,7 +84,9 @@ function App() {
 
   function handleFindStay(search?: HomeSearchCriteria | string) {
     if (typeof search === "string") {
-      navigate("/hotels", { state: search ? { location: search } : null });
+      navigate("/hotels", {
+        state: search ? { location: search } : null,
+      });
     } else if (search) {
       navigate("/hotels", {
         state: {
@@ -113,6 +116,12 @@ function App() {
           >
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
           </Route>
+
+          <Route
+            element={<PermissionRoute requiredPermission="bookings.view" />}
+          >
+            <Route path="/admin/bookings" element={<BookingsPage />} />
+          </Route>
         </Route>
       </Route>
 
@@ -123,6 +132,7 @@ function App() {
             path="/super-admin/dashboard"
             element={<SuperAdminDashboardPage />}
           />
+
           <Route
             path="/super-admin/administrators"
             element={<AdministratorsPage />}
