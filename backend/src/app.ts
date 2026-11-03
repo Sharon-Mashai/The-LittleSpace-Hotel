@@ -21,6 +21,7 @@ import adminRoomTypesRouter from "./admin/routes/roomTypes.js";
 import adminDashboardRouter from "./admin/routes/dashboard.js";
 import adminGuestsRouter from "./admin/routes/guests.js";
 import guestBookingAccessRouter from "./guest/routes/guestBookingAccess.js";
+import adminAdministratorsRouter from "./admin/routes/administrators.js";
 
 const app = express();
 
@@ -85,5 +86,6 @@ app.use("/api/admin/bookings", adminBookingsRouter);
 app.use("/api/admin/room-types", adminRoomTypesRouter);
 app.use("/api/admin/dashboard", adminDashboardRouter);
 app.use("/api/admin/guests", adminGuestsRouter);
+app.use("/api/admin/administrators", adminAdministratorsRouter);
 
 export default app;
