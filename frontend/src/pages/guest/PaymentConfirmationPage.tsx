@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { verifyPaystackPayment, type BookingSummary,} from "../services/payments";
+import { verifyPaystackPayment, type BookingSummary,} from "../../services/payments";
 
 type VerificationResult = {
   bookingId: number;
@@ -216,3 +216,4 @@ function PaymentConfirmationPage() {
 }
 
 export default PaymentConfirmationPage;
+

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { registerGuest } from "../services/auth";
+import { registerGuest } from "../../services/auth";
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -128,3 +128,4 @@ function RegisterPage() {
 }
 
 export default RegisterPage;
+

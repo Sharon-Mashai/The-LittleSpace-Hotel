@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { loginGuest } from "../services/auth";
+import { loginGuest } from "../../services/auth";
 
 function SignInPage() {
   const navigate = useNavigate();
@@ -88,3 +88,4 @@ function SignInPage() {
 }
 
 export default SignInPage;
+

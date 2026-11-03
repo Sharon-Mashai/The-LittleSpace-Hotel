@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { HomeSearchCriteria } from "./HomePage";
-import { getHotelBranches, type HotelBranch } from "../services/branches";
-import { getGuestFavourites, addGuestFavourite, removeGuestFavourite,} from "../services/favourites";
-import { getAuthToken } from "../services/auth";
-import capeTownImage from "../assets/search-results/cape-town.png";
-import tzaneenImage from "../assets/search-results/tzaneen.png";
-import johannesburgImage from "../assets/search-results/johannesburg.png";
-import pretoriaImage from "../assets/search-results/pretoria.png";
-import durbanImage from "../assets/search-results/durban.png";
-import polokwaneImage from "../assets/search-results/polokwane.png";
+import { getHotelBranches, type HotelBranch } from "../../services/branches";
+import { getGuestFavourites, addGuestFavourite, removeGuestFavourite,} from "../../services/favourites";
+import { getAuthToken } from "../../services/auth";
+import capeTownImage from "../../assets/search-results/cape-town.png";
+import tzaneenImage from "../../assets/search-results/tzaneen.png";
+import johannesburgImage from "../../assets/search-results/johannesburg.png";
+import pretoriaImage from "../../assets/search-results/pretoria.png";
+import durbanImage from "../../assets/search-results/durban.png";
+import polokwaneImage from "../../assets/search-results/polokwane.png";
 
 type HotelsPageProps = {
   initialLocation?: string;
@@ -499,3 +499,5 @@ function HotelsPage({
 }
 
 export default HotelsPage;
+
+

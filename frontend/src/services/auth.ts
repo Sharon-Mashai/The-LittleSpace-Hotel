@@ -1,35 +1,42 @@
 import { apiRequest } from "./api";
 
-export type GuestUser = {
+export type UserRole = "guest" | "admin" | "super_admin";
+
+export type AuthenticatedUser = {
   id: number;
   full_name: string;
   email: string;
-  role: string;
+  role: UserRole;
   phone: string | null;
   created_at: string;
 };
+
+// Kept for compatibility with existing guest pages.
+export type GuestUser = AuthenticatedUser;
 
 type AuthResponse = {
   success: boolean;
   message: string;
   token: string;
-  user: GuestUser;
+  user: AuthenticatedUser;
 };
 
 const TOKEN_KEY = "littlespace_token";
 const USER_KEY = "littlespace_user";
 
-function saveAuthentication(response: AuthResponse): GuestUser {
+// Save the shared authentication session.
+function saveAuthentication(response: AuthResponse): AuthenticatedUser {
   localStorage.setItem(TOKEN_KEY, response.token);
   localStorage.setItem(USER_KEY, JSON.stringify(response.user));
 
   return response.user;
 }
 
-export async function loginGuest(
+// Shared login for guests, admins and Super Admin.
+export async function loginUser(
   email: string,
   password: string,
-): Promise<GuestUser> {
+): Promise<AuthenticatedUser> {
   const response = await apiRequest<AuthResponse>("/auth/login", {
     method: "POST",
     body: { email, password },
@@ -38,12 +45,13 @@ export async function loginGuest(
   return saveAuthentication(response);
 }
 
+// Register a new guest account.
 export async function registerGuest(
   fullName: string,
   email: string,
   password: string,
   phone: string,
-): Promise<GuestUser> {
+): Promise<AuthenticatedUser> {
   const response = await apiRequest<AuthResponse>("/auth/register", {
     method: "POST",
     body: { fullName, email, password, phone },
@@ -52,11 +60,13 @@ export async function registerGuest(
   return saveAuthentication(response);
 }
 
+// Get the shared authentication token.
 export function getAuthToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
-export function getLoggedInGuest(): GuestUser | null {
+// Get the currently logged-in user, regardless of role.
+export function getLoggedInUser(): AuthenticatedUser | null {
   const storedUser = localStorage.getItem(USER_KEY);
 
   if (!storedUser) {
@@ -64,14 +74,49 @@ export function getLoggedInGuest(): GuestUser | null {
   }
 
   try {
-    return JSON.parse(storedUser) as GuestUser;
+    const user = JSON.parse(storedUser) as AuthenticatedUser;
+
+    if (!user || !["guest", "admin", "super_admin"].includes(user.role)) {
+      localStorage.removeItem(USER_KEY);
+      localStorage.removeItem(TOKEN_KEY);
+      return null;
+    }
+
+    return user;
   } catch {
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(TOKEN_KEY);
     return null;
   }
 }
 
-export function logoutGuest(): void {
+// Get the logged-in guest for existing guest-only pages.
+export function getLoggedInGuest(): GuestUser | null {
+  const user = getLoggedInUser();
+
+  if (!user || user.role !== "guest") {
+    return null;
+  }
+
+  return user;
+}
+
+
+export function logoutUser(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+}
+
+
+export function logoutGuest(): void {
+  logoutUser();
+}
+
+
+
+export async function loginGuest(
+  email: string,
+  password: string,
+): Promise<AuthenticatedUser> {
+  return loginUser(email, password);
 }

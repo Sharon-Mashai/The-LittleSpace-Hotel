@@ -1,23 +1,23 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getHotelBranches, type HotelBranch } from "../services/branches";
-import { getBranchRoomTypes, type RoomType } from "../services/roomTypes";
+import { getHotelBranches, type HotelBranch } from "../../services/branches";
+import { getBranchRoomTypes, type RoomType } from "../../services/roomTypes";
 import {
   checkRoomAvailability,
   type AvailableRoomType,
-} from "../services/availability";
-import { createBooking } from "../services/bookings";
-import { initializePaystackPayment } from "../services/payments";
+} from "../../services/availability";
+import { createBooking } from "../../services/bookings";
+import { initializePaystackPayment } from "../../services/payments";
 import {
   createReview,
   getBranchReviews,
   type BranchReviews,
-} from "../services/reviews";
+} from "../../services/reviews";
 import {
   getBookingHistory,
   type GuestBookingHistory,
-} from "../services/bookingHistory";
-import { getAuthToken } from "../services/auth";
+} from "../../services/bookingHistory";
+import { getAuthToken } from "../../services/auth";
 
 function HotelDetailsPage() {
   const { hotelId } = useParams<{ hotelId: string }>();
@@ -859,3 +859,4 @@ function HotelDetailsPage() {
 }
 
 export default HotelDetailsPage;
+

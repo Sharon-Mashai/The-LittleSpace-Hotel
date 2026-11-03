@@ -4,15 +4,15 @@ import {
   requestGuestBookingOtp,
   verifyGuestBookingOtp,
   type CustomerBooking,
-} from "../services/bookings";
-import { getAuthToken } from "../services/auth";
+} from "../../services/bookings";
+import { getAuthToken } from "../../services/auth";
 
-import capeTownImage from "../assets/search-results/cape-town.png";
-import tzaneenImage from "../assets/search-results/tzaneen.png";
-import johannesburgImage from "../assets/search-results/johannesburg.png";
-import pretoriaImage from "../assets/search-results/pretoria.png";
-import durbanImage from "../assets/search-results/durban.png";
-import polokwaneImage from "../assets/search-results/polokwane.png";
+import capeTownImage from "../../assets/search-results/cape-town.png";
+import tzaneenImage from "../../assets/search-results/tzaneen.png";
+import johannesburgImage from "../../assets/search-results/johannesburg.png";
+import pretoriaImage from "../../assets/search-results/pretoria.png";
+import durbanImage from "../../assets/search-results/durban.png";
+import polokwaneImage from "../../assets/search-results/polokwane.png";
 
 const GUEST_ACCESS_TOKEN_KEY = "littlespace_guest_booking_access_token";
 
@@ -382,3 +382,5 @@ function MyBookingsPage() {
 }
 
 export default MyBookingsPage;
+
+

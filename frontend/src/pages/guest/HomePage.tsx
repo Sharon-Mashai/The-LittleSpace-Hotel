@@ -1,10 +1,10 @@
 
 import { useState, type FormEvent } from "react";
 
-import heroImage from "../assets/hero.png";
-import capeTownImage from "../assets/cape-town.png";
-import tzaneenImage from "../assets/tzaneen.png";
-import johannesburgImage from "../assets/johannesburg.png";
+import heroImage from "../../assets/hero.png";
+import capeTownImage from "../../assets/cape-town.png";
+import tzaneenImage from "../../assets/tzaneen.png";
+import johannesburgImage from "../../assets/johannesburg.png";
 
 export type HomeSearchCriteria = {
   destination: string;
@@ -228,3 +228,4 @@ function HomePage({ onFindStay }: HomePageProps) {
 }
 
 export default HomePage;
+

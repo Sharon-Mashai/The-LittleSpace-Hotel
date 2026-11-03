@@ -4,7 +4,7 @@ import {
   getGuestProfile,
   updateGuestProfile,
   type GuestProfile,
-} from "../services/profile";
+} from "../../services/profile";
 
 function ProfilePage() {
   const navigate = useNavigate();
@@ -151,3 +151,4 @@ function ProfilePage() {
 }
 
 export default ProfilePage;
+

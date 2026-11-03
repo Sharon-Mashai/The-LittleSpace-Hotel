@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getGuestFavourites, removeGuestFavourite, type GuestFavourite,} from "../services/favourites";
+import { getGuestFavourites, removeGuestFavourite, type GuestFavourite,} from "../../services/favourites";
 
 function FavouritesPage() {
   const navigate = useNavigate();
@@ -129,3 +129,4 @@ function FavouritesPage() {
 }
 
 export default FavouritesPage;
+
