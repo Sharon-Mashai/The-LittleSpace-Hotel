@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { pool } from "../../config/db.js";
-import { authenticateAdmin, type AuthenticatedAdminRequest,} from "../middleware/auth.js";
+import {
+  authenticateAdmin,
+  requirePermission,
+  type AuthenticatedAdminRequest,
+} from "../middleware/auth.js";
 
 const router = Router();
 
@@ -9,6 +13,7 @@ const router = Router();
 router.get(
   "/",
   authenticateAdmin,
+  requirePermission("room_types.view"),
   async (_req: AuthenticatedAdminRequest, res) => {
     try {
       const result = await pool.query(`
@@ -55,6 +60,7 @@ router.get(
 router.post(
   "/",
   authenticateAdmin,
+  requirePermission("room_types.create"),
   async (req: AuthenticatedAdminRequest, res) => {
     const {
       branchId,
@@ -199,6 +205,7 @@ router.post(
 router.patch(
   "/:id",
   authenticateAdmin,
+  requirePermission("room_types.edit"),
   async (req: AuthenticatedAdminRequest, res) => {
     const roomTypeId = Number(req.params.id);
 
