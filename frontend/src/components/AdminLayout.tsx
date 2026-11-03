@@ -10,26 +10,29 @@ function AdminLayout() {
   const user = getLoggedInUser();
   const navigate = useNavigate();
 
+  const userId = user?.id;
+  const userRole = user?.role;
+  const isSuperAdmin = userRole === "super_admin";
+
   const [permissions, setPermissions] = useState<AdminPermission[]>([]);
   const [isLoadingPermissions, setIsLoadingPermissions] = useState(true);
   const [permissionError, setPermissionError] = useState("");
 
-  const isSuperAdmin = user?.role === "super_admin";
-
   useEffect(() => {
+    if (!userId || (userRole !== "admin" && userRole !== "super_admin")) {
+      navigate("/sign-in", { replace: true });
+      return;
+    }
+
     let isMounted = true;
 
     async function loadPermissions() {
-      if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
-        navigate("/sign-in", { replace: true });
-        return;
-      }
-
       try {
         const assignedPermissions = await getAdminPermissions();
 
         if (isMounted) {
           setPermissions(assignedPermissions);
+          setPermissionError("");
         }
       } catch (error) {
         if (isMounted) {
@@ -46,12 +49,12 @@ function AdminLayout() {
       }
     }
 
-    loadPermissions();
+    void loadPermissions();
 
     return () => {
       isMounted = false;
     };
-  }, [navigate, user]);
+  }, [navigate, userId, userRole]);
 
   function handleLogout() {
     logoutUser();
@@ -89,9 +92,12 @@ function AdminLayout() {
     <div className="admin-layout">
       <aside className="admin-sidebar">
         <div className="admin-sidebar-brand">
+          <span className="admin-brand-eyebrow">HOTEL MANAGEMENT</span>
           <h2>LittleSpace</h2>
           <p>{isSuperAdmin ? "Super Admin Portal" : "Admin Portal"}</p>
         </div>
+
+        <div className="admin-navigation-heading">MENU</div>
 
         <nav className="admin-navigation">
           {hasPermission("dashboard.view") && (
@@ -99,31 +105,36 @@ function AdminLayout() {
               to={isSuperAdmin ? "/super-admin/dashboard" : "/admin/dashboard"}
               className="admin-nav-link"
             >
-              Dashboard
+              <span className="admin-nav-indicator">01</span>
+              <span>Dashboard</span>
             </NavLink>
           )}
 
           {hasPermission("bookings.view") && (
             <NavLink to="/admin/bookings" className="admin-nav-link">
-              Bookings
+              <span className="admin-nav-indicator">02</span>
+              <span>Bookings</span>
             </NavLink>
           )}
 
           {hasPermission("guests.view") && (
             <NavLink to="/admin/guests" className="admin-nav-link">
-              Guests
+              <span className="admin-nav-indicator">03</span>
+              <span>Guests</span>
             </NavLink>
           )}
 
           {hasPermission("branches.view") && (
             <NavLink to="/admin/branches" className="admin-nav-link">
-              Branches
+              <span className="admin-nav-indicator">04</span>
+              <span>Branches</span>
             </NavLink>
           )}
 
           {hasPermission("room_types.view") && (
             <NavLink to="/admin/room-types" className="admin-nav-link">
-              Room Types
+              <span className="admin-nav-indicator">05</span>
+              <span>Room Types</span>
             </NavLink>
           )}
 
@@ -132,16 +143,30 @@ function AdminLayout() {
               to="/super-admin/administrators"
               className="admin-nav-link"
             >
-              Administrator Management
+              <span className="admin-nav-indicator">06</span>
+              <span>Administrator Management</span>
             </NavLink>
           )}
         </nav>
 
         <div className="admin-sidebar-footer">
-          <p>{user.full_name}</p>
-          <small>{isSuperAdmin ? "Super Admin" : "Admin"}</small>
+          <div className="admin-user-profile">
+            <div className="admin-user-avatar" aria-hidden="true">
+              {user.full_name.charAt(0).toUpperCase()}
+            </div>
 
-          <button type="button" onClick={handleLogout}>
+            <div className="admin-user-details">
+              <p>{user.full_name}</p>
+              <small>{isSuperAdmin ? "Super Admin" : "Admin"}</small>
+            </div>
+          </div>
+
+          <button
+            className="admin-sign-out-button"
+            type="button"
+            onClick={handleLogout}
+          >
+            <span aria-hidden="true">↗</span>
             Sign Out
           </button>
         </div>
