@@ -111,3 +111,18 @@ export async function authenticateAdmin(
     });
   }
 }
+
+export function requireSuperAdmin(
+  req: AuthenticatedAdminRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  if (!req.user || req.user.role !== "super_admin") {
+    return res.status(403).json({
+      success: false,
+      message: "Only Super Admins can perform this action.",
+    });
+  }
+
+  next();
+}
