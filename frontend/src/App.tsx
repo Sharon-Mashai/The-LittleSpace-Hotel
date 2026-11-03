@@ -1,10 +1,9 @@
 import { useLocation, useNavigate, Routes, Route } from "react-router-dom";
-
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PermissionRoute from "./components/PermissionRoute";
 import AdminLayout from "./components/AdminLayout";
-
 import HomePage, { type HomeSearchCriteria } from "./pages/guest/HomePage";
 import HotelsPage from "./pages/guest/HotelsPage";
 import MyBookingsPage from "./pages/guest/MyBookingsPage";
@@ -20,7 +19,6 @@ import PaymentConfirmationPage from "./pages/guest/PaymentConfirmationPage";
 import AdminDashboardPage from "./pages/Admin/AdminDashboardPage";
 import SuperAdminDashboardPage from "./pages/super-admin/SuperAdminDashboardPage";
 import AdministratorsPage from "./pages/super-admin/AdministratorsPage";
-
 import NotFoundPage from "./pages/NotFoundPage";
 import "./App.css";
 
@@ -85,9 +83,7 @@ function App() {
 
   function handleFindStay(search?: HomeSearchCriteria | string) {
     if (typeof search === "string") {
-      navigate("/hotels", {
-        state: search ? { location: search } : null,
-      });
+      navigate("/hotels", { state: search ? { location: search } : null });
     } else if (search) {
       navigate("/hotels", {
         state: {
@@ -105,15 +101,18 @@ function App() {
   return (
     <Routes>
       {/* Guest website routes */}
-      <Route
-        path="/*"
-        element={<GuestLayout onFindStay={handleFindStay} />}
-      />
+      <Route path="/*" element={<GuestLayout onFindStay={handleFindStay} />} />
 
-      {/* Admin routes: accessible to Admin and Super Admin */}
-      <Route element={<ProtectedRoute allowedRoles={["admin", "super_admin"]} />}>
+      {/* Admin routes */}
+      <Route
+        element={<ProtectedRoute allowedRoles={["admin", "super_admin"]} />}
+      >
         <Route element={<AdminLayout />}>
-          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+          <Route
+            element={<PermissionRoute requiredPermission="dashboard.view" />}
+          >
+            <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+          </Route>
         </Route>
       </Route>
 
