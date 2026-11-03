@@ -1,8 +1,15 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { pool } from "../../config/db.js";
-import { authenticateAdmin, requireSuperAdmin } from "../middleware/auth.js";
-import { ADMIN_PERMISSIONS, type AdminPermission } from "../routes/permissions.js";
+import {
+  authenticateAdmin,
+  requireSuperAdmin,
+  type AuthenticatedAdminRequest,
+} from "../middleware/auth.js";
+import {
+  ADMIN_PERMISSIONS,
+  type AdminPermission,
+} from "../routes/permissions.js";
 
 const router = Router();
 
@@ -35,6 +42,63 @@ function getAdminId(value: string | string[] | undefined): string | null {
 function isValidAdminId(adminId: string): boolean {
   return /^\d+$/.test(adminId) && BigInt(adminId) > 0n;
 }
+
+// GET /api/admin/administrators/me/permissions
+// Return permissions belonging to the currently logged-in administrator.
+router.get(
+  "/me/permissions",
+  authenticateAdmin,
+  async (req: AuthenticatedAdminRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: "Authentication is required.",
+        });
+      }
+
+      // Super Admins automatically have every available permission.
+      if (req.user.role === "super_admin") {
+        return res.status(200).json({
+          success: true,
+          data: {
+            userId: req.user.id,
+            role: req.user.role,
+            permissions: ADMIN_PERMISSIONS.map((permission) => permission.key),
+          },
+        });
+      }
+
+      const result = await pool.query(
+        `
+          SELECT permission
+          FROM admin_permissions
+          WHERE user_id = $1
+          ORDER BY permission ASC
+        `,
+        [req.user.id],
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          userId: req.user.id,
+          role: req.user.role,
+          permissions: result.rows.map(
+            (row: { permission: string }) => row.permission,
+          ),
+        },
+      });
+    } catch (error) {
+      console.error("Failed to retrieve own administrator permissions:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to retrieve your permissions.",
+      });
+    }
+  },
+);
 
 // GET /api/admin/administrators/permissions
 // Return all available permission definitions.
