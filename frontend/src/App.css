@@ -1,4 +1,3 @@
-
 /* =========================================
    AUTHENTICATION TEXT ALIGNMENT
 ========================================= */
@@ -950,7 +949,9 @@ img {
   background: #fff;
   color: var(--text);
   font-size: 14px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .auth-form > input::placeholder {
@@ -1130,7 +1131,9 @@ img {
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
 .primary-button:hover {
@@ -1159,7 +1162,7 @@ img {
   .home-stay-card > img {
     height: 200px;
   }
- .search-page {
+  .search-page {
     padding: 50px 8% 70px;
   }
 }
@@ -1470,7 +1473,9 @@ img {
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 
-  transition: transform 0.2s ease, background-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .favourite-toggle:hover {
@@ -1479,7 +1484,6 @@ img {
 
 .favourite-toggle {
   color: #333333;
-
 }
 
 .favourite-toggle.active {
@@ -1523,12 +1527,15 @@ img {
   font-size: clamp(38px, 5vw, 54px);
 }
 
-.account-page:has(.hotel-reviews-section) > .account-page-heading > p:not(.eyebrow) {
+.account-page:has(.hotel-reviews-section)
+  > .account-page-heading
+  > p:not(.eyebrow) {
   margin: 10px 0 0;
 }
 
 /* About this branch card */
-.account-page:has(.hotel-reviews-section) > .empty-state:not(.review-form-section) {
+.account-page:has(.hotel-reviews-section)
+  > .empty-state:not(.review-form-section) {
   max-width: 100%;
   padding: 32px 38px;
   border: 1px solid var(--border);
@@ -1538,12 +1545,16 @@ img {
   text-align: left;
 }
 
-.account-page:has(.hotel-reviews-section) > .empty-state:not(.review-form-section) h2 {
+.account-page:has(.hotel-reviews-section)
+  > .empty-state:not(.review-form-section)
+  h2 {
   margin: 0 0 18px;
   font-size: 27px;
 }
 
-.account-page:has(.hotel-reviews-section) > .empty-state:not(.review-form-section) p {
+.account-page:has(.hotel-reviews-section)
+  > .empty-state:not(.review-form-section)
+  p {
   max-width: none;
   margin: 10px 0;
   color: var(--muted);
@@ -1964,7 +1975,8 @@ img {
     font-size: 37px;
   }
 
-  .account-page:has(.hotel-reviews-section) > .empty-state:not(.review-form-section) {
+  .account-page:has(.hotel-reviews-section)
+    > .empty-state:not(.review-form-section) {
     padding: 25px 22px;
   }
 
@@ -2626,13 +2638,15 @@ img {
   color: #28251f;
   font-family: Arial, sans-serif;
   font-size: 14px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .admin-management-search input:focus,
 .admin-form-field input:focus {
   border-color: #8b765f;
-  box-shadow: 0 0 0 3px rgba(112, 91, 71, 0.10);
+  box-shadow: 0 0 0 3px rgba(112, 91, 71, 0.1);
 }
 
 .admin-management-search input::placeholder,
@@ -2648,7 +2662,10 @@ img {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s, transform 0.2s, opacity 0.2s;
+  transition:
+    background 0.2s,
+    transform 0.2s,
+    opacity 0.2s;
 }
 
 .admin-secondary-button {
@@ -3172,6 +3189,269 @@ img {
   }
 
   .super-admin-dashboard-note {
+    align-items: flex-start;
+    padding: 14px;
+  }
+}
+
+/* =========================================
+   LITTLESPACE - ADMIN DASHBOARD
+========================================= */
+
+.hotel-admin-dashboard {
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 36px;
+  color: #28251f;
+}
+
+.hotel-admin-dashboard-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 38px;
+}
+
+.hotel-admin-dashboard-heading h1 {
+  margin: 0 0 10px;
+  color: #28251f;
+  font-family: Georgia, serif;
+  font-size: 36px;
+  font-weight: 500;
+}
+
+.hotel-admin-dashboard-heading p {
+  margin: 0;
+  color: #777168;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.hotel-admin-role-label {
+  flex-shrink: 0;
+  padding: 9px 15px;
+  border: 1px solid #e5d9ca;
+  border-radius: 30px;
+  background: #f5f0e9;
+  color: #705b47;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hotel-admin-dashboard-intro {
+  margin-bottom: 20px;
+}
+
+.hotel-admin-dashboard-intro h2 {
+  margin: 0 0 7px;
+  color: #28251f;
+  font-family: Georgia, serif;
+  font-size: 23px;
+  font-weight: 500;
+}
+
+.hotel-admin-dashboard-intro p {
+  margin: 0;
+  color: #777168;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.hotel-admin-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.hotel-admin-dashboard-card {
+  display: flex;
+  min-height: 235px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 25px 27px;
+  border: 1px solid #e8e1d8;
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+  box-shadow: 0 4px 18px rgba(40, 37, 31, 0.035);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.hotel-admin-dashboard-card:hover {
+  transform: translateY(-4px);
+  border-color: #cbb9a5;
+  box-shadow: 0 12px 28px rgba(40, 37, 31, 0.09);
+}
+
+.hotel-admin-card-top {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 25px;
+}
+
+.hotel-admin-card-number {
+  display: flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #f2ece4;
+  color: #705b47;
+  font-family: Georgia, serif;
+  font-size: 14px;
+}
+
+.hotel-admin-card-arrow {
+  display: flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e8e1d8;
+  border-radius: 50%;
+  color: #705b47;
+  font-size: 19px;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.hotel-admin-dashboard-card:hover .hotel-admin-card-arrow {
+  transform: translateX(3px);
+  border-color: #705b47;
+  background: #705b47;
+  color: #fff;
+}
+
+.hotel-admin-card-content {
+  margin-bottom: 20px;
+}
+
+.hotel-admin-card-eyebrow {
+  display: block;
+  margin-bottom: 9px;
+  color: #927c64;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+
+.hotel-admin-card-content h2 {
+  margin: 0 0 9px;
+  color: #28251f;
+  font-family: Georgia, serif;
+  font-size: 23px;
+  font-weight: 500;
+}
+
+.hotel-admin-card-content p {
+  margin: 0;
+  color: #777168;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.hotel-admin-card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  color: #705b47;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hotel-admin-card-link span {
+  transition: transform 0.2s ease;
+}
+
+.hotel-admin-dashboard-card:hover .hotel-admin-card-link span {
+  transform: translateX(4px);
+}
+
+.hotel-admin-dashboard-note {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-top: 28px;
+  padding: 17px 19px;
+  border: 1px solid #e8e1d8;
+  border-radius: 9px;
+  background: #f8f5f0;
+}
+
+.hotel-admin-note-icon {
+  display: flex;
+  width: 25px;
+  height: 25px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #b9a58d;
+  border-radius: 50%;
+  color: #705b47;
+  font-family: Georgia, serif;
+  font-size: 14px;
+}
+
+.hotel-admin-dashboard-note p {
+  margin: 0;
+  color: #70685e;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Responsive Admin Dashboard */
+
+@media (max-width: 768px) {
+  .hotel-admin-dashboard {
+    padding: 24px 18px;
+  }
+
+  .hotel-admin-dashboard-heading {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .hotel-admin-dashboard-heading h1 {
+    font-size: 29px;
+  }
+
+  .hotel-admin-dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .hotel-admin-dashboard-card {
+    min-height: 215px;
+    padding: 23px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hotel-admin-dashboard {
+    padding: 20px 12px;
+  }
+
+  .hotel-admin-dashboard-heading h1 {
+    font-size: 26px;
+  }
+
+  .hotel-admin-card-content h2 {
+    font-size: 21px;
+  }
+
+  .hotel-admin-dashboard-note {
     align-items: flex-start;
     padding: 14px;
   }

@@ -1,121 +1,105 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getLoggedInUser } from "../../services/auth";
-import {
-  getAdminPermissions,
-  type AdminPermission,
-} from "../../services/adminPermissions";
 
 function AdminDashboardPage() {
   const user = getLoggedInUser();
-  const userId = user?.id;
-  const userRole = user?.role;
 
-  const [permissions, setPermissions] = useState<AdminPermission[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const isSuperAdmin = userRole === "super_admin";
-  const isAdministrator = userRole === "admin" || userRole === "super_admin";
-
-  useEffect(() => {
-    if (!isAdministrator || !userId) {
-      return;
-    }
-
-    let isMounted = true;
-
-    async function loadPermissions() {
-      try {
-        const assignedPermissions = await getAdminPermissions();
-
-        if (isMounted) {
-          setPermissions(assignedPermissions);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Unable to load dashboard permissions.",
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadPermissions();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [isAdministrator, userId]);
-
-  function hasPermission(permission: AdminPermission): boolean {
-    return isSuperAdmin || permissions.includes(permission);
-  }
-
-  if (!isAdministrator) {
-    return (
-      <div className="admin-dashboard">
-        <p>You must be logged in as an administrator.</p>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return <div className="admin-dashboard">Loading dashboard...</div>;
-  }
-
-  if (error) {
-    return (
-      <div className="admin-dashboard">
-        <p>{error}</p>
-      </div>
-    );
-  }
+  const dashboardSections = [
+    {
+      number: "01",
+      eyebrow: "RESERVATION MANAGEMENT",
+      title: "Bookings",
+      description: "View and manage guest bookings.",
+      link: "/admin/bookings",
+    },
+    {
+      number: "02",
+      eyebrow: "GUEST MANAGEMENT",
+      title: "Guests",
+      description: "View guest records and information.",
+      link: "/admin/guests",
+    },
+    {
+      number: "03",
+      eyebrow: "HOTEL LOCATIONS",
+      title: "Branches",
+      description: "Manage LittleSpace Hotel branches.",
+      link: "/admin/branches",
+    },
+    {
+      number: "04",
+      eyebrow: "ACCOMMODATION",
+      title: "Room Types",
+      description: "Manage available room types.",
+      link: "/admin/room-types",
+    },
+  ];
 
   return (
-    <div className="admin-dashboard">
-      <div className="admin-dashboard-header">
-        <h1>Admin Dashboard</h1>
+    <div className="hotel-admin-dashboard">
+      <div className="hotel-admin-dashboard-heading">
+        <div>
+          <span className="admin-page-eyebrow">
+            LITTLESPACE HOTEL MANAGEMENT
+          </span>
+
+          <h1>Admin Dashboard</h1>
+
+          <p>
+            Welcome back, {user?.full_name ?? "Admin"}. Manage LittleSpace Hotel
+            operations from here.
+          </p>
+        </div>
+
+        <span className="hotel-admin-role-label">Admin Portal</span>
+      </div>
+
+      <div className="hotel-admin-dashboard-intro">
+        <h2>Hotel Operations</h2>
         <p>
-          Welcome back, {user?.full_name ?? "Admin"}. Manage LittleSpace Hotel
-          operations from here.
+          Select an area below to manage the day-to-day operations of
+          LittleSpace Hotel.
         </p>
       </div>
 
-      <div className="admin-dashboard-cards">
-        {hasPermission("bookings.view") && (
-          <Link to="/admin/bookings" className="admin-dashboard-card">
-            <h2>Bookings</h2>
-            <p>View and manage guest bookings.</p>
-          </Link>
-        )}
+      <div className="hotel-admin-dashboard-grid">
+        {dashboardSections.map((section) => (
+          <Link
+            key={section.number}
+            to={section.link}
+            className="hotel-admin-dashboard-card"
+          >
+            <div className="hotel-admin-card-top">
+              <span className="hotel-admin-card-number">{section.number}</span>
 
-        {hasPermission("guests.view") && (
-          <Link to="/admin/guests" className="admin-dashboard-card">
-            <h2>Guests</h2>
-            <p>View guest records and information.</p>
-          </Link>
-        )}
+              <span className="hotel-admin-card-arrow" aria-hidden="true">
+                →
+              </span>
+            </div>
 
-        {hasPermission("branches.view") && (
-          <Link to="/admin/branches" className="admin-dashboard-card">
-            <h2>Branches</h2>
-            <p>Manage LittleSpace Hotel branches.</p>
-          </Link>
-        )}
+            <div className="hotel-admin-card-content">
+              <span className="hotel-admin-card-eyebrow">
+                {section.eyebrow}
+              </span>
 
-        {hasPermission("room_types.view") && (
-          <Link to="/admin/room-types" className="admin-dashboard-card">
-            <h2>Room Types</h2>
-            <p>Manage available room types.</p>
+              <h2>{section.title}</h2>
+
+              <p>{section.description}</p>
+            </div>
+
+            <span className="hotel-admin-card-link">
+              Open section <span aria-hidden="true">→</span>
+            </span>
           </Link>
-        )}
+        ))}
+      </div>
+
+      <div className="hotel-admin-dashboard-note">
+        <span className="hotel-admin-note-icon">i</span>
+        <p>
+          Your access to hotel operations depends on the permissions assigned to
+          your administrator account.
+        </p>
       </div>
     </div>
   );
