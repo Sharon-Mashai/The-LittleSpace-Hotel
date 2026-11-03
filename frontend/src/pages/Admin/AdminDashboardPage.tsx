@@ -1,52 +1,48 @@
-
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { getLoggedInUser, logoutUser } from "../../services/auth";
-import { getAdminPermissions, type AdminPermission,} from "../../services/adminPermissions";
+import { Link } from "react-router-dom";
+import { getLoggedInUser } from "../../services/auth";
+import {
+  getAdminPermissions,
+  type AdminPermission,
+} from "../../services/adminPermissions";
 
-function AdminLayout() {
+function AdminDashboardPage() {
   const user = getLoggedInUser();
-  const navigate = useNavigate();
-
-  // Use stable user values instead of the entire user object.
   const userId = user?.id;
   const userRole = user?.role;
 
   const [permissions, setPermissions] = useState<AdminPermission[]>([]);
-  const [isLoadingPermissions, setIsLoadingPermissions] = useState(true);
-  const [permissionError, setPermissionError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const isSuperAdmin = userRole === "super_admin";
+  const isAdministrator = userRole === "admin" || userRole === "super_admin";
 
   useEffect(() => {
+    if (!isAdministrator || !userId) {
+      return;
+    }
+
     let isMounted = true;
 
     async function loadPermissions() {
-      if (
-        !userId ||
-        (userRole !== "admin" && userRole !== "super_admin")
-      ) {
-        navigate("/sign-in", { replace: true });
-        return;
-      }
-
       try {
         const assignedPermissions = await getAdminPermissions();
 
         if (isMounted) {
           setPermissions(assignedPermissions);
         }
-      } catch (error) {
+      } catch (err) {
         if (isMounted) {
-          setPermissionError(
-            error instanceof Error
-              ? error.message
-              : "Unable to load administrator permissions.",
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Unable to load dashboard permissions.",
           );
         }
       } finally {
         if (isMounted) {
-          setIsLoadingPermissions(false);
+          setIsLoading(false);
         }
       }
     }
@@ -56,111 +52,73 @@ function AdminLayout() {
     return () => {
       isMounted = false;
     };
-  }, [navigate, userId, userRole]);
-
-  function handleLogout() {
-    logoutUser();
-    navigate("/sign-in", { replace: true });
-  }
+  }, [isAdministrator, userId]);
 
   function hasPermission(permission: AdminPermission): boolean {
     return isSuperAdmin || permissions.includes(permission);
   }
 
-  if (!user) {
-    return null;
-  }
-
-  if (isLoadingPermissions) {
+  if (!isAdministrator) {
     return (
-      <div className="admin-layout-loading">
-        Loading administrator portal...
+      <div className="admin-dashboard">
+        <p>You must be logged in as an administrator.</p>
       </div>
     );
   }
 
-  if (permissionError) {
+  if (isLoading) {
+    return <div className="admin-dashboard">Loading dashboard...</div>;
+  }
+
+  if (error) {
     return (
-      <div className="admin-layout-error">
-        <p>{permissionError}</p>
-        <button type="button" onClick={handleLogout}>
-          Sign Out
-        </button>
+      <div className="admin-dashboard">
+        <p>{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="admin-layout">
-      <aside className="admin-sidebar">
-        <div className="admin-sidebar-brand">
-          <h2>LittleSpace</h2>
-          <p>{isSuperAdmin ? "Super Admin Portal" : "Admin Portal"}</p>
-        </div>
+    <div className="admin-dashboard">
+      <div className="admin-dashboard-header">
+        <h1>Admin Dashboard</h1>
+        <p>
+          Welcome back, {user?.full_name ?? "Admin"}. Manage LittleSpace Hotel
+          operations from here.
+        </p>
+      </div>
 
-        <nav className="admin-navigation">
-          {hasPermission("dashboard.view") && (
-            <NavLink
-              to={
-                isSuperAdmin
-                  ? "/super-admin/dashboard"
-                  : "/admin/dashboard"
-              }
-              className="admin-nav-link"
-            >
-              Dashboard
-            </NavLink>
-          )}
+      <div className="admin-dashboard-cards">
+        {hasPermission("bookings.view") && (
+          <Link to="/admin/bookings" className="admin-dashboard-card">
+            <h2>Bookings</h2>
+            <p>View and manage guest bookings.</p>
+          </Link>
+        )}
 
-          {hasPermission("bookings.view") && (
-            <NavLink to="/admin/bookings" className="admin-nav-link">
-              Bookings
-            </NavLink>
-          )}
+        {hasPermission("guests.view") && (
+          <Link to="/admin/guests" className="admin-dashboard-card">
+            <h2>Guests</h2>
+            <p>View guest records and information.</p>
+          </Link>
+        )}
 
-          {hasPermission("guests.view") && (
-            <NavLink to="/admin/guests" className="admin-nav-link">
-              Guests
-            </NavLink>
-          )}
+        {hasPermission("branches.view") && (
+          <Link to="/admin/branches" className="admin-dashboard-card">
+            <h2>Branches</h2>
+            <p>Manage LittleSpace Hotel branches.</p>
+          </Link>
+        )}
 
-          {hasPermission("branches.view") && (
-            <NavLink to="/admin/branches" className="admin-nav-link">
-              Branches
-            </NavLink>
-          )}
-
-          {hasPermission("room_types.view") && (
-            <NavLink to="/admin/room-types" className="admin-nav-link">
-              Room Types
-            </NavLink>
-          )}
-
-          {isSuperAdmin && (
-            <NavLink
-              to="/super-admin/administrators"
-              className="admin-nav-link"
-            >
-              Administrator Management
-            </NavLink>
-          )}
-        </nav>
-
-        <div className="admin-sidebar-footer">
-          <p>{user.full_name}</p>
-          <small>{isSuperAdmin ? "Super Admin" : "Admin"}</small>
-
-          <button type="button" onClick={handleLogout}>
-            Sign Out
-          </button>
-        </div>
-      </aside>
-
-      <main className="admin-main-content">
-        <Outlet />
-      </main>
+        {hasPermission("room_types.view") && (
+          <Link to="/admin/room-types" className="admin-dashboard-card">
+            <h2>Room Types</h2>
+            <p>Manage available room types.</p>
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
 
-export default AdminLayout;
+export default AdminDashboardPage;
