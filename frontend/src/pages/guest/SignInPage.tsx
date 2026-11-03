@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { loginGuest } from "../../services/auth";
+import { loginUser } from "../../services/auth";
 
 function SignInPage() {
   const navigate = useNavigate();
@@ -17,8 +17,25 @@ function SignInPage() {
     setLoading(true);
 
     try {
-      await loginGuest(email, password);
-      navigate("/");
+      const user = await loginUser(email, password);
+
+      switch (user.role) {
+        case "guest":
+          navigate("/");
+          break;
+
+        case "admin":
+          navigate("/admin/dashboard");
+          break;
+
+        case "super_admin":
+          navigate("/super-admin/dashboard");
+          break;
+
+        default:
+          setError("Your account has an unsupported role.");
+          break;
+      }
     } catch (error) {
       setError(
         error instanceof Error
@@ -88,4 +105,3 @@ function SignInPage() {
 }
 
 export default SignInPage;
-
