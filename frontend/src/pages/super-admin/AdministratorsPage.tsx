@@ -20,26 +20,44 @@ type AdministratorsResponse = {
   data: Administrator[];
 };
 
-type CreateAdministratorResponse = {
+type AdministratorResponse = {
   success: boolean;
   message: string;
   data: Administrator;
 };
 
+type EditAdministratorForm = {
+  fullName: string;
+  email: string;
+  phone: string;
+};
+
 function AdministratorsPage() {
   const [administrators, setAdministrators] = useState<Administrator[]>([]);
   const [search, setSearch] = useState("");
+
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
 
+  const [editingAdministrator, setEditingAdministrator] =
+    useState<Administrator | null>(null);
+  const [editForm, setEditForm] = useState<EditAdministratorForm>({
+    fullName: "",
+    email: "",
+    phone: "",
+  });
+
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [changingStatusId, setChangingStatusId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Refresh the administrator list manually or after creating an account.
   const loadAdministrators = useCallback(async () => {
     const token = getAuthToken();
 
@@ -74,11 +92,15 @@ function AdministratorsPage() {
     }
   }, [search]);
 
-  // Load administrator accounts when the page opens or search changes.
+  // Load administrator accounts whenever the search value changes.
   useEffect(() => {
     let cancelled = false;
 
     async function fetchAdministrators() {
+      // Defer the request so state updates do not happen synchronously
+      // while React is running this effect.
+      await Promise.resolve();
+
       const token = getAuthToken();
 
       if (!token) {
@@ -140,7 +162,7 @@ function AdministratorsPage() {
       setError("");
       setSuccessMessage("");
 
-      const response = await apiRequest<CreateAdministratorResponse>(
+      const response = await apiRequest<AdministratorResponse>(
         "/admin/administrators",
         {
           method: "POST",
@@ -169,6 +191,159 @@ function AdministratorsPage() {
       );
     } finally {
       setCreating(false);
+    }
+  }
+
+  function openEditModal(administrator: Administrator) {
+    setEditingAdministrator(administrator);
+    setEditForm({
+      fullName: administrator.full_name,
+      email: administrator.email,
+      phone: administrator.phone ?? "",
+    });
+    setError("");
+    setSuccessMessage("");
+  }
+
+  function closeEditModal() {
+    if (savingEdit) return;
+
+    setEditingAdministrator(null);
+    setEditForm({
+      fullName: "",
+      email: "",
+      phone: "",
+    });
+  }
+
+  async function handleEditAdministrator(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingAdministrator) return;
+
+    const token = getAuthToken();
+
+    if (!token) {
+      setError("Your session has expired. Please sign in again.");
+      return;
+    }
+
+    try {
+      setSavingEdit(true);
+      setError("");
+      setSuccessMessage("");
+
+      const response = await apiRequest<AdministratorResponse>(
+        `/admin/administrators/${editingAdministrator.id}`,
+        {
+          method: "PUT",
+          token,
+          body: {
+            fullName: editForm.fullName.trim(),
+            email: editForm.email.trim(),
+            phone: editForm.phone.trim() || null,
+          },
+        },
+      );
+
+      setSuccessMessage(response.message);
+      setEditingAdministrator(null);
+
+      await loadAdministrators();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to update administrator details.",
+      );
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function handleToggleStatus(administrator: Administrator) {
+    const token = getAuthToken();
+
+    if (!token) {
+      setError("Your session has expired. Please sign in again.");
+      return;
+    }
+
+    const nextStatus = !administrator.is_active;
+    const action = nextStatus ? "enable" : "disable";
+
+    const confirmed = window.confirm(
+      `Are you sure you want to ${action} ${administrator.full_name}'s account?`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setChangingStatusId(administrator.id);
+      setError("");
+      setSuccessMessage("");
+
+      const response = await apiRequest<AdministratorResponse>(
+        `/admin/administrators/${administrator.id}/status`,
+        {
+          method: "PATCH",
+          token,
+          body: {
+            isActive: nextStatus,
+          },
+        },
+      );
+
+      setSuccessMessage(response.message);
+      await loadAdministrators();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to change administrator account status.",
+      );
+    } finally {
+      setChangingStatusId(null);
+    }
+  }
+
+  async function handleDeleteAdministrator(administrator: Administrator) {
+    const token = getAuthToken();
+
+    if (!token) {
+      setError("Your session has expired. Please sign in again.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete ${administrator.full_name}'s account?\n\nThis action cannot be undone. Accounts linked to bookings or reviews cannot be deleted.`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(administrator.id);
+      setError("");
+      setSuccessMessage("");
+
+      const response = await apiRequest<AdministratorResponse>(
+        `/admin/administrators/${administrator.id}`,
+        {
+          method: "DELETE",
+          token,
+        },
+      );
+
+      setSuccessMessage(response.message);
+      await loadAdministrators();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to delete administrator account.",
+      );
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -204,7 +379,7 @@ function AdministratorsPage() {
           <div>
             <span className="admin-card-eyebrow">ACCOUNT DIRECTORY</span>
             <h2>Administrator Accounts</h2>
-            <p>View and search the administrator accounts in your system.</p>
+            <p>View, search and manage administrator accounts.</p>
           </div>
 
           <span className="admin-account-count">
@@ -256,6 +431,7 @@ function AdministratorsPage() {
                   <th>Contact details</th>
                   <th>Role</th>
                   <th>Account status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
 
@@ -308,6 +484,63 @@ function AdministratorsPage() {
                         <span className="admin-status-dot" />
                         {administrator.is_active ? "Active" : "Inactive"}
                       </span>
+                    </td>
+
+                    <td>
+                      {administrator.role === "admin" ? (
+                        <div className="admin-management-actions">
+                          <button
+                            type="button"
+                            className="admin-secondary-button"
+                            onClick={() => openEditModal(administrator)}
+                            disabled={
+                              savingEdit ||
+                              changingStatusId === administrator.id ||
+                              deletingId === administrator.id
+                            }
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            className="admin-secondary-button"
+                            onClick={() =>
+                              void handleToggleStatus(administrator)
+                            }
+                            disabled={
+                              changingStatusId === administrator.id ||
+                              deletingId === administrator.id
+                            }
+                          >
+                            {changingStatusId === administrator.id
+                              ? "Updating..."
+                              : administrator.is_active
+                                ? "Disable"
+                                : "Enable"}
+                          </button>
+
+                          <button
+                            type="button"
+                            className="admin-danger-button"
+                            onClick={() =>
+                              void handleDeleteAdministrator(administrator)
+                            }
+                            disabled={
+                              deletingId === administrator.id ||
+                              changingStatusId === administrator.id
+                            }
+                          >
+                            {deletingId === administrator.id
+                              ? "Deleting..."
+                              : "Delete"}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="admin-readonly-label">
+                          Protected account
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -407,6 +640,114 @@ function AdministratorsPage() {
           </div>
         </form>
       </section>
+
+      {editingAdministrator && (
+        <div
+          className="admin-branch-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeEditModal();
+            }
+          }}
+        >
+          <section
+            className="admin-branch-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-administrator-title"
+          >
+            <div className="admin-branch-modal-header">
+              <div>
+                <span className="admin-card-eyebrow">ACCOUNT DETAILS</span>
+                <h2 id="edit-administrator-title">Edit Administrator</h2>
+                <p>Update this administrator's contact information.</p>
+              </div>
+
+              <button
+                type="button"
+                className="admin-branch-close-button"
+                onClick={closeEditModal}
+                disabled={savingEdit}
+                aria-label="Close edit form"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleEditAdministrator}>
+              <div className="admin-branch-form-grid">
+                <div className="admin-form-field">
+                  <label htmlFor="edit-admin-full-name">Full name</label>
+                  <input
+                    id="edit-admin-full-name"
+                    type="text"
+                    value={editForm.fullName}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        fullName: event.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="admin-form-field">
+                  <label htmlFor="edit-admin-email">Email address</label>
+                  <input
+                    id="edit-admin-email"
+                    type="email"
+                    value={editForm.email}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        email: event.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="admin-form-field">
+                  <label htmlFor="edit-admin-phone">Phone number</label>
+                  <input
+                    id="edit-admin-phone"
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        phone: event.target.value,
+                      }))
+                    }
+                    placeholder="Optional"
+                  />
+                </div>
+              </div>
+
+              <div className="admin-branch-form-footer">
+                <button
+                  type="button"
+                  className="admin-secondary-button"
+                  onClick={closeEditModal}
+                  disabled={savingEdit}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="admin-primary-button"
+                  disabled={savingEdit}
+                >
+                  {savingEdit ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
