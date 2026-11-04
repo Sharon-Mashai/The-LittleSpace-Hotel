@@ -19,6 +19,7 @@ import PaymentConfirmationPage from "./pages/guest/PaymentConfirmationPage";
 import AdminDashboardPage from "./pages/Admin/AdminDashboardPage";
 import BookingsPage from "./pages/Admin/BookingsPage";
 import AdminGuestsPage from "./pages/Admin/AdminGuestsPage";
+import AdminBranchesPage from "./pages/Admin/AdminBranchesPage";
 import SuperAdminDashboardPage from "./pages/super-admin/SuperAdminDashboardPage";
 import AdministratorsPage from "./pages/super-admin/AdministratorsPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -65,8 +66,8 @@ function GuestLayout({ onFindStay }: GuestLayoutProps) {
         <Route path="/profile/favourites" element={<FavouritesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/booking-confirmation" element={<BookingConfirmationPage />}/>
-        <Route path="/payment-confirmation"element={<PaymentConfirmationPage />}/>
+        <Route path="/booking-confirmation" element={<BookingConfirmationPage />} />
+        <Route path="/payment-confirmation" element={<PaymentConfirmationPage />} />
       </Routes>
 
       <Footer />
@@ -120,6 +121,12 @@ function App() {
 
           <Route element={<PermissionRoute requiredPermission="guests.view" />}>
             <Route path="/admin/guests" element={<AdminGuestsPage />} />
+          </Route>
+
+          <Route
+            element={<PermissionRoute requiredPermission="branches.view" />}
+          >
+            <Route path="/admin/branches" element={<AdminBranchesPage />} />
           </Route>
         </Route>
       </Route>
