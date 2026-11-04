@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { apiRequest } from "../../services/api";
 import { getAuthToken } from "../../services/auth";
@@ -43,6 +44,7 @@ function AdministratorsPage() {
 
   const [editingAdministrator, setEditingAdministrator] =
     useState<Administrator | null>(null);
+
   const [editForm, setEditForm] = useState<EditAdministratorForm>({
     fullName: "",
     email: "",
@@ -54,6 +56,9 @@ function AdministratorsPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [changingStatusId, setChangingStatusId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const actionsMenuRef = useRef<HTMLDivElement | null>(null);
 
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -97,8 +102,6 @@ function AdministratorsPage() {
     let cancelled = false;
 
     async function fetchAdministrators() {
-      // Defer the request so state updates do not happen synchronously
-      // while React is running this effect.
       await Promise.resolve();
 
       const token = getAuthToken();
@@ -146,6 +149,34 @@ function AdministratorsPage() {
       cancelled = true;
     };
   }, [search]);
+
+  // Close the dropdown when the user clicks outside it or presses Escape.
+  useEffect(() => {
+    if (openMenuId === null) return;
+
+    function handleOutsideClick(event: MouseEvent) {
+      if (
+        actionsMenuRef.current &&
+        !actionsMenuRef.current.contains(event.target as Node)
+      ) {
+        setOpenMenuId(null);
+      }
+    }
+
+    function handleEscapeKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpenMenuId(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscapeKey);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscapeKey);
+    };
+  }, [openMenuId]);
 
   async function handleCreateAdministrator(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -195,6 +226,7 @@ function AdministratorsPage() {
   }
 
   function openEditModal(administrator: Administrator) {
+    setOpenMenuId(null);
     setEditingAdministrator(administrator);
     setEditForm({
       fullName: administrator.full_name,
@@ -488,53 +520,94 @@ function AdministratorsPage() {
 
                     <td>
                       {administrator.role === "admin" ? (
-                        <div className="admin-management-actions">
+                        <div
+                          className="admin-actions-menu"
+                          ref={
+                            openMenuId === administrator.id
+                              ? actionsMenuRef
+                              : null
+                          }
+                        >
                           <button
                             type="button"
-                            className="admin-secondary-button"
-                            onClick={() => openEditModal(administrator)}
+                            className="admin-actions-menu-trigger"
+                            aria-label={`Actions for ${administrator.full_name}`}
+                            aria-haspopup="menu"
+                            aria-expanded={openMenuId === administrator.id}
+                            onClick={() =>
+                              setOpenMenuId((current) =>
+                                current === administrator.id
+                                  ? null
+                                  : administrator.id,
+                              )
+                            }
                             disabled={
                               savingEdit ||
                               changingStatusId === administrator.id ||
                               deletingId === administrator.id
                             }
                           >
-                            Edit
+                            <span aria-hidden="true">⋮</span>
                           </button>
 
-                          <button
-                            type="button"
-                            className="admin-secondary-button"
-                            onClick={() =>
-                              void handleToggleStatus(administrator)
-                            }
-                            disabled={
-                              changingStatusId === administrator.id ||
-                              deletingId === administrator.id
-                            }
-                          >
-                            {changingStatusId === administrator.id
-                              ? "Updating..."
-                              : administrator.is_active
-                                ? "Disable"
-                                : "Enable"}
-                          </button>
+                          {openMenuId === administrator.id && (
+                            <div
+                              className="admin-actions-dropdown"
+                              role="menu"
+                            >
+                              <button
+                                type="button"
+                                className="admin-dropdown-item"
+                                role="menuitem"
+                                onClick={() => openEditModal(administrator)}
+                                disabled={
+                                  savingEdit ||
+                                  changingStatusId === administrator.id ||
+                                  deletingId === administrator.id
+                                }
+                              >
+                                Edit
+                              </button>
 
-                          <button
-                            type="button"
-                            className="admin-danger-button"
-                            onClick={() =>
-                              void handleDeleteAdministrator(administrator)
-                            }
-                            disabled={
-                              deletingId === administrator.id ||
-                              changingStatusId === administrator.id
-                            }
-                          >
-                            {deletingId === administrator.id
-                              ? "Deleting..."
-                              : "Delete"}
-                          </button>
+                              <button
+                                type="button"
+                                className="admin-dropdown-item"
+                                role="menuitem"
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  void handleToggleStatus(administrator);
+                                }}
+                                disabled={
+                                  changingStatusId === administrator.id ||
+                                  deletingId === administrator.id
+                                }
+                              >
+                                {changingStatusId === administrator.id
+                                  ? "Updating..."
+                                  : administrator.is_active
+                                    ? "Disable"
+                                    : "Enable"}
+                              </button>
+
+                              <button
+                                type="button"
+                                className="admin-dropdown-item danger"
+                                role="menuitem"
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  void handleDeleteAdministrator(administrator);
+                                }}
+                                disabled={
+                                  deletingId === administrator.id ||
+                                  changingStatusId === administrator.id
+                                }
+                              >
+                                {deletingId === administrator.id
+                                  ? "Deleting..."
+                                  : "Delete"}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <span className="admin-readonly-label">

@@ -5032,3 +5032,148 @@ img {
     width: 100%;
   }
 }
+
+/* Administrator action buttons */
+.admin-management-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 230px;
+}
+
+.admin-management-actions button {
+  width: 100px;
+  height: 36px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+/* Primary - Edit */
+.admin-primary-button {
+  background: #292929;
+  color: #ffffff;
+  border: 1px solid #292929;
+}
+
+.admin-primary-button:hover {
+  background: #444444;
+  border-color: #444444;
+}
+
+/* Secondary - Enable / Disable */
+.admin-secondary-button {
+  background: #ffffff;
+  color: #333333;
+  border: 1px solid #d5d5d5;
+}
+
+.admin-secondary-button:hover {
+  background: #f2f2f2;
+}
+
+/* Danger - Delete */
+.admin-danger-button {
+  background: #dc3545;
+  color: #ffffff;
+  border: 1px solid #dc3545;
+}
+
+.admin-danger-button:hover:not(:disabled) {
+  background: #b52a37;
+  border-color: #b52a37;
+}
+
+.admin-management-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Super Admin administrator actions dropdown */
+.admin-actions-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.admin-actions-menu-trigger {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #dedede;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #292929;
+  font-size: 27px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.admin-actions-menu-trigger:hover:not(:disabled),
+.admin-actions-menu-trigger[aria-expanded="true"] {
+  background: #f2f2f2;
+  border-color: #bdbdbd;
+}
+
+.admin-actions-menu-trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-actions-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100;
+  min-width: 155px;
+  padding: 6px;
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 9px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.13);
+}
+
+.admin-dropdown-item {
+  width: 100%;
+  display: block;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #292929;
+  text-align: left;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.admin-dropdown-item:hover:not(:disabled) {
+  background: #f2f2f2;
+}
+
+.admin-dropdown-item.danger {
+  color: #dc3545;
+}
+
+.admin-dropdown-item.danger:hover:not(:disabled) {
+  background: #fff0f1;
+  color: #b52a37;
+}
+
+.admin-dropdown-item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
