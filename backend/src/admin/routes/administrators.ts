@@ -44,7 +44,6 @@ function isValidAdminId(adminId: string): boolean {
 }
 
 // GET /api/admin/administrators/me/permissions
-// Return permissions belonging to the currently logged-in administrator.
 router.get(
   "/me/permissions",
   authenticateAdmin,
@@ -57,7 +56,6 @@ router.get(
         });
       }
 
-      // Super Admins automatically have every available permission.
       if (req.user.role === "super_admin") {
         return res.status(200).json({
           success: true,
@@ -101,7 +99,6 @@ router.get(
 );
 
 // GET /api/admin/administrators/permissions
-// Return all available permission definitions.
 router.get(
   "/permissions",
   authenticateAdmin,
@@ -116,7 +113,6 @@ router.get(
 );
 
 // GET /api/admin/administrators/:adminId/permissions
-// Return permissions assigned to one ordinary Admin.
 router.get(
   "/:adminId/permissions",
   authenticateAdmin,
@@ -180,7 +176,6 @@ router.get(
 );
 
 // PUT /api/admin/administrators/:adminId/permissions
-// Replace all permissions assigned to one ordinary Admin.
 router.put(
   "/:adminId/permissions",
   authenticateAdmin,
@@ -207,7 +202,6 @@ router.put(
 
     try {
       client = await pool.connect();
-
       await client.query("BEGIN");
 
       const adminResult = await client.query(
@@ -230,13 +224,9 @@ router.put(
         });
       }
 
-      await client.query(
-        `
-          DELETE FROM admin_permissions
-          WHERE user_id = $1
-        `,
-        [adminId],
-      );
+      await client.query(`DELETE FROM admin_permissions WHERE user_id = $1`, [
+        adminId,
+      ]);
 
       for (const permission of permissions) {
         await client.query(
@@ -275,8 +265,319 @@ router.put(
   },
 );
 
+// PUT /api/admin/administrators/:adminId
+// Update an ordinary Admin's name, email and phone number.
+router.put(
+  "/:adminId",
+  authenticateAdmin,
+  requireSuperAdmin,
+  async (req, res) => {
+    const adminId = getAdminId(req.params.adminId);
+    const { fullName, email, phone } = req.body ?? {};
+
+    if (adminId === null || !isValidAdminId(adminId)) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid administrator ID is required.",
+      });
+    }
+
+    if (
+      typeof fullName !== "string" ||
+      !fullName.trim() ||
+      typeof email !== "string" ||
+      !email.trim()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Full name and email are required.",
+      });
+    }
+
+    if (phone !== undefined && phone !== null && typeof phone !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Phone must be a string or null.",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPhone =
+      typeof phone === "string" && phone.trim() ? phone.trim() : null;
+
+    try {
+      const result = await pool.query(
+        `
+          UPDATE users
+          SET
+            full_name = $1,
+            email = $2,
+            phone = $3,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $4
+            AND role = 'admin'
+          RETURNING
+            id,
+            full_name,
+            email,
+            phone,
+            role,
+            is_active,
+            created_at,
+            updated_at
+        `,
+        [fullName.trim(), normalizedEmail, normalizedPhone, adminId],
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Administrator account not found.",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Administrator details updated successfully.",
+        data: result.rows[0],
+      });
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "23505"
+      ) {
+        return res.status(409).json({
+          success: false,
+          message: "An account with this email already exists.",
+        });
+      }
+
+      console.error("Failed to update administrator:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to update administrator details.",
+      });
+    }
+  },
+);
+
+// PATCH /api/admin/administrators/:adminId/status
+// Enable or disable an ordinary Admin account.
+router.patch(
+  "/:adminId/status",
+  authenticateAdmin,
+  requireSuperAdmin,
+  async (req: AuthenticatedAdminRequest, res) => {
+    const adminId = getAdminId(req.params.adminId);
+    const { isActive } = req.body ?? {};
+
+    if (adminId === null || !isValidAdminId(adminId)) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid administrator ID is required.",
+      });
+    }
+
+    if (typeof isActive !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "isActive must be true or false.",
+      });
+    }
+
+    if (req.user && adminId === req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You cannot change your own Super Admin account status.",
+      });
+    }
+
+    try {
+      const result = await pool.query(
+        `
+          UPDATE users
+          SET
+            is_active = $1,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $2
+            AND role = 'admin'
+          RETURNING
+            id,
+            full_name,
+            email,
+            phone,
+            role,
+            is_active,
+            updated_at
+        `,
+        [isActive, adminId],
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Administrator account not found.",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: isActive
+          ? "Administrator account enabled successfully."
+          : "Administrator account disabled successfully.",
+        data: result.rows[0],
+      });
+    } catch (error) {
+      console.error("Failed to update administrator account status:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to update administrator account status.",
+      });
+    }
+  },
+);
+
+// DELETE /api/admin/administrators/:adminId
+// Delete an ordinary Admin only when no bookings or reviews reference the account.
+router.delete(
+  "/:adminId",
+  authenticateAdmin,
+  requireSuperAdmin,
+  async (req: AuthenticatedAdminRequest, res) => {
+    const adminId = getAdminId(req.params.adminId);
+
+    if (adminId === null || !isValidAdminId(adminId)) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid administrator ID is required.",
+      });
+    }
+
+    if (req.user && adminId === req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You cannot delete your own Super Admin account.",
+      });
+    }
+
+    let client;
+
+    try {
+      client = await pool.connect();
+      await client.query("BEGIN");
+
+      const adminResult = await client.query(
+        `
+          SELECT id, full_name, email
+          FROM users
+          WHERE id = $1
+            AND role = 'admin'
+          FOR UPDATE
+        `,
+        [adminId],
+      );
+
+      if (adminResult.rows.length === 0) {
+        await client.query("ROLLBACK");
+
+        return res.status(404).json({
+          success: false,
+          message: "Administrator account not found.",
+        });
+      }
+
+      const bookingsResult = await client.query(
+        `
+          SELECT EXISTS (
+            SELECT 1
+            FROM bookings
+            WHERE user_id = $1
+          ) AS has_bookings
+        `,
+        [adminId],
+      );
+
+      const reviewsResult = await client.query(
+        `
+          SELECT EXISTS (
+            SELECT 1
+            FROM reviews
+            WHERE user_id = $1
+          ) AS has_reviews
+        `,
+        [adminId],
+      );
+
+      const hasBookings = bookingsResult.rows[0].has_bookings;
+      const hasReviews = reviewsResult.rows[0].has_reviews;
+
+      if (hasBookings || hasReviews) {
+        await client.query("ROLLBACK");
+
+        const reasons: string[] = [];
+
+        if (hasBookings) {
+          reasons.push("bookings");
+        }
+
+        if (hasReviews) {
+          reasons.push("reviews");
+        }
+
+        return res.status(409).json({
+          success: false,
+          message: `This administrator cannot be deleted because the account is linked to existing ${reasons.join(" and ")}. Disable the account instead.`,
+        });
+      }
+
+      await client.query(`DELETE FROM users WHERE id = $1 AND role = 'admin'`, [
+        adminId,
+      ]);
+
+      await client.query("COMMIT");
+
+      return res.status(200).json({
+        success: true,
+        message: "Administrator account deleted successfully.",
+        data: {
+          id: adminId,
+        },
+      });
+    } catch (error: unknown) {
+      if (client) {
+        await client.query("ROLLBACK");
+      }
+
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "23503"
+      ) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "This account is linked to existing records and cannot be deleted. Disable the account instead.",
+        });
+      }
+
+      console.error("Failed to delete administrator account:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to delete administrator account.",
+      });
+    } finally {
+      client?.release();
+    }
+  },
+);
+
 // GET /api/admin/administrators
-// Only the Super Admin can view administrator accounts.
 router.get("/", authenticateAdmin, requireSuperAdmin, async (req, res) => {
   try {
     const search =
@@ -321,7 +622,6 @@ router.get("/", authenticateAdmin, requireSuperAdmin, async (req, res) => {
 });
 
 // POST /api/admin/administrators
-// Create an Admin account and its initial permissions in one transaction.
 router.post("/", authenticateAdmin, requireSuperAdmin, async (req, res) => {
   const { fullName, email, password, phone, permissions = [] } = req.body ?? {};
 
@@ -375,7 +675,6 @@ router.post("/", authenticateAdmin, requireSuperAdmin, async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
 
     client = await pool.connect();
-
     await client.query("BEGIN");
 
     const result = await client.query(
