@@ -9,7 +9,6 @@ import {
 } from "../services/adminPermissions";
 
 function AdminLayout() {
-  // Read the authenticated user from Redux.
   const user = useAppSelector((state) => state.auth.user);
 
   const dispatch = useAppDispatch();
@@ -63,10 +62,7 @@ function AdminLayout() {
 
   function handleLogout() {
     logoutUser();
-
-    // Clear the authenticated user from Redux.
     dispatch(clearAuthenticatedUser());
-
     navigate("/sign-in", { replace: true });
   }
 
@@ -175,7 +171,6 @@ function AdminLayout() {
             type="button"
             onClick={handleLogout}
           >
-            <span aria-hidden="true">â†—</span>
             Sign Out
           </button>
         </div>
