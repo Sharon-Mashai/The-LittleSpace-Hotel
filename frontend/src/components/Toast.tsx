@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 type ToastProps = {
   message: string;
@@ -6,16 +6,13 @@ type ToastProps = {
 };
 
 function Toast({ message, onDismiss }: ToastProps) {
-  const onDismissRef = useRef(onDismiss);
-  onDismissRef.current = onDismiss;
-
   useEffect(() => {
     if (!message) return;
 
-    const timeoutId = window.setTimeout(() => onDismissRef.current(), 4000);
+    const timeoutId = window.setTimeout(onDismiss, 4000);
 
     return () => window.clearTimeout(timeoutId);
-  }, [message]);
+  }, [message, onDismiss]);
 
   if (!message) return null;
 

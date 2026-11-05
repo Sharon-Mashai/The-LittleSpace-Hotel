@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getGuestFavourites, removeGuestFavourite, type GuestFavourite,} from "../../services/favourites";
 import ConfirmationModal from "../../components/ConfirmationModal";
@@ -15,6 +15,7 @@ function FavouritesPage() {
     null,
   );
   const [successMessage, setSuccessMessage] = useState("");
+  const dismissSuccessToast = useCallback(() => setSuccessMessage(""), []);
 
   useEffect(() => {
     async function loadFavourites() {
@@ -152,7 +153,7 @@ function FavouritesPage() {
       )}
       <Toast
         message={successMessage}
-        onDismiss={() => setSuccessMessage("")}
+        onDismiss={dismissSuccessToast}
       />
     </main>
   );

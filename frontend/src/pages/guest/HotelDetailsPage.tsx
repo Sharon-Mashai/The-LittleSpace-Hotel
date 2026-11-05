@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getHotelBranches, type HotelBranch } from "../../services/branches";
 import { getBranchRoomTypes, type RoomType } from "../../services/roomTypes";
@@ -78,6 +78,10 @@ function HotelDetailsPage() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewSubmitError, setReviewSubmitError] = useState("");
   const [reviewSubmitSuccess, setReviewSubmitSuccess] = useState("");
+  const dismissReviewToast = useCallback(
+    () => setReviewSubmitSuccess(""),
+    [],
+  );
 
   // Today's date is used as the earliest allowed check-in date.
   const minimumBookingDate = getTodayDateString();
@@ -932,7 +936,7 @@ function HotelDetailsPage() {
 
       <Toast
         message={reviewSubmitSuccess}
-        onDismiss={() => setReviewSubmitSuccess("")}
+        onDismiss={dismissReviewToast}
       />
 
       <p>

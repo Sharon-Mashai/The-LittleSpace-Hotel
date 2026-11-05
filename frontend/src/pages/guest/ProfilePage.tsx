@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getGuestProfile,
@@ -18,6 +18,7 @@ function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const dismissSuccessToast = useCallback(() => setSuccess(""), []);
 
   useEffect(() => {
     async function loadProfile() {
@@ -145,7 +146,7 @@ function ProfilePage() {
           **Member since:** {new Date(profile.created_at).toLocaleDateString()}
         </p>
       </section>
-      <Toast message={success} onDismiss={() => setSuccess("")} />
+      <Toast message={success} onDismiss={dismissSuccessToast} />
     </main>
   );
 }

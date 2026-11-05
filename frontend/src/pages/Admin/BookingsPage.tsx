@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { apiRequest } from "../../services/api";
 import { getAuthToken } from "../../services/auth";
 import ConfirmationModal from "../../components/ConfirmationModal";
@@ -104,6 +104,7 @@ function BookingsPage() {
   const canReject = permissions.includes("bookings.reject");
 
   const isUpdating = updatingBookingId !== null;
+  const dismissSuccessToast = useCallback(() => setSuccessMessage(""), []);
 
   useEffect(() => {
     let isMounted = true;
@@ -264,7 +265,7 @@ function BookingsPage() {
 
       <Toast
         message={successMessage}
-        onDismiss={() => setSuccessMessage("")}
+        onDismiss={dismissSuccessToast}
       />
 
       {bookings.length === 0 ? (
