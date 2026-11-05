@@ -2,11 +2,21 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getHotelBranches, type HotelBranch } from "../../services/branches";
 import { getBranchRoomTypes, type RoomType } from "../../services/roomTypes";
-import { checkRoomAvailability, type AvailableRoomType,} from "../../services/availability";
+import {
+  checkRoomAvailability,
+  type AvailableRoomType,
+} from "../../services/availability";
 import { createBooking } from "../../services/bookings";
 import { initializePaystackPayment } from "../../services/payments";
-import { createReview, getBranchReviews, type BranchReviews,} from "../../services/reviews";
-import { getBookingHistory, type GuestBookingHistory,} from "../../services/bookingHistory";
+import {
+  createReview,
+  getBranchReviews,
+  type BranchReviews,
+} from "../../services/reviews";
+import {
+  getBookingHistory,
+  type GuestBookingHistory,
+} from "../../services/bookingHistory";
 import { getAuthToken } from "../../services/auth";
 import BranchMap from "../../components/BranchMap";
 
@@ -58,6 +68,7 @@ function HotelDetailsPage() {
   const [reviewSubmitError, setReviewSubmitError] = useState("");
   const [reviewSubmitSuccess, setReviewSubmitSuccess] = useState("");
 
+  // Load the selected branch and its room types using the branch slug.
   useEffect(() => {
     async function loadBranchDetails() {
       try {
@@ -65,6 +76,8 @@ function HotelDetailsPage() {
         setError("");
 
         const branches = await getHotelBranches();
+
+        // Find the branch using its slug from the URL.
         const matchingBranch = branches.find((item) => item.slug === hotelId);
 
         if (!matchingBranch) {

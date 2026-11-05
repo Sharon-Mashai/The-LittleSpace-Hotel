@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L, { divIcon } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -9,6 +9,13 @@ import { getHotelBranches, type HotelBranch } from "../services/branches";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+import capeTownImage from "../assets/search-results/cape-town.png";
+import tzaneenImage from "../assets/search-results/tzaneen.png";
+import johannesburgImage from "../assets/search-results/johannesburg.png";
+import pretoriaImage from "../assets/search-results/pretoria.png";
+import durbanImage from "../assets/search-results/durban.png";
+import polokwaneImage from "../assets/search-results/polokwane.png";
 
 // Configure Leaflet's default marker images.
 L.Icon.Default.mergeOptions({
@@ -36,6 +43,16 @@ export type BranchView = "map" | "list";
 type BranchLocationsProps = {
   view: BranchView;
   selectedBranchId?: string | null;
+};
+
+// Match each branch city to its existing hotel image.
+const branchImages: Record<string, string> = {
+  "cape town": capeTownImage,
+  tzaneen: tzaneenImage,
+  johannesburg: johannesburgImage,
+  pretoria: pretoriaImage,
+  durban: durbanImage,
+  polokwane: polokwaneImage,
 };
 
 // Controls the map position based on the selected branch.
@@ -67,7 +84,6 @@ function MapController({
       }
     }
 
-    // Display all branch locations when no specific branch is selected.
     if (branches.length > 0) {
       const bounds = L.latLngBounds(
         branches.map((branch) => [branch.latitude!, branch.longitude!]),
@@ -87,9 +103,17 @@ function BranchLocations({
   view,
   selectedBranchId = null,
 }: BranchLocationsProps) {
+  const navigate = useNavigate();
+
   const [branches, setBranches] = useState<HotelBranch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Navigate to branch details using the branch slug.
+  function handleExploreStay(branchSlug: string) {
+    navigate(`/hotels/${branchSlug}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   // Fetch all LittleSpace branches from the backend.
   useEffect(() => {
@@ -148,6 +172,7 @@ function BranchLocations({
               zoom={5}
               scrollWheelZoom={false}
               className="all-branches-map"
+              style={{ width: "100%", height: "100%" }}
             >
               <MapController
                 branches={branchesWithCoordinates}
@@ -173,9 +198,13 @@ function BranchLocations({
                         {branch.address_line}, {branch.city}
                       </p>
 
-                      <Link to={`/hotels/${branch.id}`}>
+                      <button
+                        type="button"
+                        className="branch-location-link"
+                        onClick={() => handleExploreStay(branch.slug)}
+                      >
                         View branch details →
-                      </Link>
+                      </button>
                     </div>
                   </Popup>
                 </Marker>
@@ -192,30 +221,42 @@ function BranchLocations({
       {/* List view */}
       {!isLoading && !error && view === "list" && (
         <div className="branch-locations-list">
-          {branches.map((branch) => (
-            <article className="branch-location-card" key={branch.id}>
-              <div className="branch-location-icon">
-                <span>H</span>
-              </div>
+          {branches.map((branch) => {
+            const image = branchImages[branch.city.trim().toLowerCase()];
 
-              <div className="branch-location-info">
-                <h3>{branch.name}</h3>
+            return (
+              <article className="branch-location-card" key={branch.id}>
+                {image ? (
+                  <img
+                    className="branch-location-image"
+                    src={image}
+                    alt={`${branch.city} hotel accommodation`}
+                  />
+                ) : (
+                  <div className="branch-location-image-placeholder">H</div>
+                )}
 
-                <p>
-                  {branch.address_line}
-                  {branch.suburb ? `, ${branch.suburb}` : ""}, {branch.city}
-                  {branch.province ? `, ${branch.province}` : ""}
-                </p>
-              </div>
+                <div className="branch-location-info">
+                  <h3>{branch.name}</h3>
 
-              <Link
-                className="branch-location-link"
-                to={`/hotels/${branch.id}`}
-              >
-                View branch →
-              </Link>
-            </article>
-          ))}
+                  <p>
+                    {branch.address_line}
+                    {branch.suburb ? `, ${branch.suburb}` : ""}
+                    {branch.city ? `, ${branch.city}` : ""}
+                    {branch.province ? `, ${branch.province}` : ""}
+                  </p>
+
+                  <button
+                    type="button"
+                    className="branch-location-link"
+                    onClick={() => handleExploreStay(branch.slug)}
+                  >
+                    Explore stay →
+                  </button>
+                </div>
+              </article>
+            );
+          })}
         </div>
       )}
 

@@ -3,9 +3,6 @@ import { useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import heroImage from "../../assets/hero.png";
-import capeTownImage from "../../assets/cape-town.png";
-import tzaneenImage from "../../assets/tzaneen.png";
-import johannesburgImage from "../../assets/johannesburg.png";
 
 import BranchLocations, {
   type BranchView,
@@ -24,24 +21,6 @@ type HomePageProps = {
   onFindStay: (search?: HomeSearchCriteria | string) => void;
 };
 
-const homeStays = [
-  {
-    location: "Cape Town",
-    image: capeTownImage,
-    description: "Discover a comfortable stay in the Mother City.",
-  },
-  {
-    location: "Tzaneen",
-    image: tzaneenImage,
-    description: "Enjoy a relaxing escape surrounded by nature.",
-  },
-  {
-    location: "Johannesburg",
-    image: johannesburgImage,
-    description: "Find your space in the heart of the city.",
-  },
-];
-
 function HomePage({ onFindStay }: HomePageProps) {
   const [destination, setDestination] = useState("");
   const [checkIn, setCheckIn] = useState("");
@@ -53,7 +32,8 @@ function HomePage({ onFindStay }: HomePageProps) {
   const [searchParams] = useSearchParams();
   const selectedBranchId = searchParams.get("branch");
 
-  const [view, setView] = useState<BranchView>("map");
+  // Show the branch list when the home page first loads.
+  const [view, setView] = useState<BranchView>("list");
 
   function handleViewChange(nextView: BranchView) {
     setView(nextView);
@@ -244,30 +224,6 @@ function HomePage({ onFindStay }: HomePageProps) {
               List view
             </button>
           </div>
-        </div>
-
-        <div className="home-stays-grid">
-          {homeStays.map((stay) => (
-            <button
-              className="home-stay-card"
-              type="button"
-              key={stay.location}
-              onClick={() => onFindStay(stay.location)}
-            >
-              <img
-                src={stay.image}
-                alt={`${stay.location} destination`}
-              />
-
-              <span className="home-stay-info">
-                <strong>{stay.location}</strong>
-
-                <span>{stay.description}</span>
-
-                <span className="card-link">Explore stay →</span>
-              </span>
-            </button>
-          ))}
         </div>
 
         <BranchLocations

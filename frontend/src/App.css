@@ -5183,55 +5183,178 @@ img {
 .admin-dropdown-item:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-}
+}/* =========================================
+   BRANCH LOCATIONS
+========================================= */
 
-/* Branch location map */
-.branch-map-section {
+.branch-locations-content {
   width: 100%;
-  margin: 32px 0;
+  margin-top: 30px;
 }
 
-.branch-map-section h2 {
-  margin-bottom: 12px;
+/* List view */
+
+.branch-locations-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
 }
 
-.branch-map-section > p {
-  margin-bottom: 16px;
-}
-
-.branch-map-container {
-  width: 100%;
-  height: 400px;
+.branch-location-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
   overflow: hidden;
-  border-radius: 12px;
-  border: 1px solid #e5e5e5;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--card-bg);
+  color: var(--text);
 }
 
-.branch-map {
+.branch-location-image {
+  display: block;
+  flex-shrink: 0;
+  width: 145px;
+  height: 125px;
+  border-radius: 7px;
+  object-fit: cover;
+}
+
+.branch-location-image-placeholder {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 145px;
+  height: 125px;
+  border-radius: 7px;
+  background: #1f2937;
+  color: #fff;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.branch-location-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.branch-location-info h3 {
+  margin: 0 0 9px;
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.branch-location-info p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.branch-location-link {
+  display: inline-block;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.branch-location-link:hover {
+  text-decoration: underline;
+}
+
+/* Map view */
+
+.all-branches-map-container {
+  display: block;
+  width: 100%;
+  height: 500px;
+  min-height: 500px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.all-branches-map {
   width: 100%;
   height: 100%;
+  min-height: 500px;
   z-index: 1;
 }
 
-.branch-map-attribution {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #666;
+.branch-map-popup strong {
+  font-size: 14px;
 }
 
-.branch-map-unavailable {
-  padding: 20px;
-  border: 1px solid #e5e5e5;
-  border-radius: 12px;
-  background: #f8f8f8;
+.branch-map-popup p {
+  margin: 8px 0;
+  font-size: 12px;
 }
+
+.branch-map-popup a {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* General messages */
+
+.branch-locations-count {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.branch-locations-message {
+  padding: 30px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.branch-locations-message.error {
+  color: #b42318;
+}
+
+/* Responsive layout */
 
 @media (max-width: 768px) {
-  .branch-map-container {
-    height: 300px;
+  .branch-locations-list {
+    grid-template-columns: 1fr;
+  }
+
+  .all-branches-map-container {
+    height: 350px;
+    min-height: 350px;
+  }
+
+  .all-branches-map {
+    min-height: 350px;
   }
 }
 
+@media (max-width: 480px) {
+  .branch-location-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .branch-location-image,
+  .branch-location-image-placeholder {
+    width: 100%;
+    height: 190px;
+  }
+}
 /* Custom LittleSpace hotel map marker */
 .hotel-map-marker-wrapper {
   background: transparent;
@@ -5257,4 +5380,41 @@ img {
   font-weight: 700;
   transform: rotate(45deg);
 }
+/* Map and List view toggle */
 
+.branch-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+}
+
+.branch-view-toggle button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.branch-view-toggle button:hover {
+  background: var(--border);
+}
+
+.branch-view-toggle button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.branch-view-toggle button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
