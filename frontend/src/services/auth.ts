@@ -21,6 +21,11 @@ type AuthResponse = {
   user: AuthenticatedUser;
 };
 
+type PasswordResetResponse = {
+  success: boolean;
+  message: string;
+};
+
 const TOKEN_KEY = "littlespace_token";
 const USER_KEY = "littlespace_user";
 
@@ -58,6 +63,27 @@ export async function registerGuest(
   });
 
   return saveAuthentication(response);
+}
+
+// Request a password reset email for a guest.
+export async function requestPasswordReset(
+  email: string,
+): Promise<PasswordResetResponse> {
+  return apiRequest<PasswordResetResponse>("/auth/forgot-password", {
+    method: "POST",
+    body: { email },
+  });
+}
+
+// Reset a guest password using the token from the email link.
+export async function resetGuestPassword(
+  token: string,
+  password: string,
+): Promise<PasswordResetResponse> {
+  return apiRequest<PasswordResetResponse>("/auth/reset-password", {
+    method: "POST",
+    body: { token, password },
+  });
 }
 
 // Get the shared authentication token.
@@ -101,18 +127,14 @@ export function getLoggedInGuest(): GuestUser | null {
   return user;
 }
 
-
 export function logoutUser(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 }
 
-
 export function logoutGuest(): void {
   logoutUser();
 }
-
-
 
 export async function loginGuest(
   email: string,
