@@ -1,13 +1,18 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { getLoggedInUser, logoutUser } from "../services/auth";
+import { useAppDispatch, useAppSelector } from "../app/hooks";
+import { clearAuthenticatedUser } from "../features/auth/authSlice";
+import { logoutUser } from "../services/auth";
 import {
   getAdminPermissions,
   type AdminPermission,
 } from "../services/adminPermissions";
 
 function AdminLayout() {
-  const user = getLoggedInUser();
+  // Read the authenticated user from Redux.
+  const user = useAppSelector((state) => state.auth.user);
+
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
   const userId = user?.id;
@@ -58,6 +63,10 @@ function AdminLayout() {
 
   function handleLogout() {
     logoutUser();
+
+    // Clear the authenticated user from Redux.
+    dispatch(clearAuthenticatedUser());
+
     navigate("/sign-in", { replace: true });
   }
 
@@ -166,7 +175,7 @@ function AdminLayout() {
             type="button"
             onClick={handleLogout}
           >
-            <span aria-hidden="true">↗</span>
+            <span aria-hidden="true">â†—</span>
             Sign Out
           </button>
         </div>
