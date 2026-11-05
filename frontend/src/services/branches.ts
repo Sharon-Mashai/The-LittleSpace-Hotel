@@ -27,5 +27,18 @@ type BranchesResponse = {
 export async function getHotelBranches(): Promise<HotelBranch[]> {
   const response = await apiRequest<BranchesResponse>("/branches");
 
-  return response.data;
+  return response.data.map((branch) => {
+    const latitude = branch.latitude === null ? null : Number(branch.latitude);
+
+    const longitude =
+      branch.longitude === null ? null : Number(branch.longitude);
+
+    return {
+      ...branch,
+      latitude:
+        latitude !== null && Number.isFinite(latitude) ? latitude : null,
+      longitude:
+        longitude !== null && Number.isFinite(longitude) ? longitude : null,
+    };
+  });
 }

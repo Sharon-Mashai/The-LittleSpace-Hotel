@@ -2,22 +2,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getHotelBranches, type HotelBranch } from "../../services/branches";
 import { getBranchRoomTypes, type RoomType } from "../../services/roomTypes";
-import {
-  checkRoomAvailability,
-  type AvailableRoomType,
-} from "../../services/availability";
+import { checkRoomAvailability, type AvailableRoomType,} from "../../services/availability";
 import { createBooking } from "../../services/bookings";
 import { initializePaystackPayment } from "../../services/payments";
-import {
-  createReview,
-  getBranchReviews,
-  type BranchReviews,
-} from "../../services/reviews";
-import {
-  getBookingHistory,
-  type GuestBookingHistory,
-} from "../../services/bookingHistory";
+import { createReview, getBranchReviews, type BranchReviews,} from "../../services/reviews";
+import { getBookingHistory, type GuestBookingHistory,} from "../../services/bookingHistory";
 import { getAuthToken } from "../../services/auth";
+import BranchMap from "../../components/BranchMap";
 
 function HotelDetailsPage() {
   const { hotelId } = useParams<{ hotelId: string }>();
@@ -445,6 +436,13 @@ function HotelDetailsPage() {
         </p>
       </section>
 
+      {/* Branch location map */}
+      <BranchMap
+        branchName={branch.name}
+        latitude={branch.latitude}
+        longitude={branch.longitude}
+      />
+
       {/* Reviews and rating summary */}
       <section className="hotel-reviews-section">
         <div className="account-page-heading">
@@ -859,4 +857,3 @@ function HotelDetailsPage() {
 }
 
 export default HotelDetailsPage;
-

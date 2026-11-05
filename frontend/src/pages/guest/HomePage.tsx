@@ -1,10 +1,15 @@
 
 import { useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import heroImage from "../../assets/hero.png";
 import capeTownImage from "../../assets/cape-town.png";
 import tzaneenImage from "../../assets/tzaneen.png";
 import johannesburgImage from "../../assets/johannesburg.png";
+
+import BranchLocations, {
+  type BranchView,
+} from "../../components/BranchLocations";
 
 export type HomeSearchCriteria = {
   destination: string;
@@ -45,6 +50,15 @@ function HomePage({ onFindStay }: HomePageProps) {
   const [children, setChildren] = useState(0);
   const [rooms, setRooms] = useState(1);
 
+  const [searchParams] = useSearchParams();
+  const selectedBranchId = searchParams.get("branch");
+
+  const [view, setView] = useState<BranchView>("map");
+
+  function handleViewChange(nextView: BranchView) {
+    setView(nextView);
+  }
+
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -72,13 +86,17 @@ function HomePage({ onFindStay }: HomePageProps) {
             src={heroImage}
             alt="A welcoming, comfortable living space"
           />
+
           <div className="hero-overlay" />
 
           <div className="hero-content">
             <p className="eyebrow">THE LITTLESPACE HOTEL</p>
+
             <h1>Stay that feels like home.</h1>
+
             <p className="hero-description">
-              Discover welcoming spaces and comfortable stays across South Africa.
+              Discover welcoming spaces and comfortable stays across South
+              Africa.
             </p>
 
             <button
@@ -100,6 +118,7 @@ function HomePage({ onFindStay }: HomePageProps) {
           <div className="search-banner-fields">
             <label className="search-field destination-field">
               <span>Destination</span>
+
               <input
                 type="text"
                 list="home-destinations"
@@ -107,6 +126,7 @@ function HomePage({ onFindStay }: HomePageProps) {
                 value={destination}
                 onChange={(event) => setDestination(event.target.value)}
               />
+
               <datalist id="home-destinations">
                 <option value="Cape Town" />
                 <option value="Tzaneen" />
@@ -119,6 +139,7 @@ function HomePage({ onFindStay }: HomePageProps) {
 
             <label className="search-field">
               <span>Check-in</span>
+
               <input
                 type="date"
                 value={checkIn}
@@ -130,6 +151,7 @@ function HomePage({ onFindStay }: HomePageProps) {
 
             <label className="search-field">
               <span>Check-out</span>
+
               <input
                 type="date"
                 value={checkOut}
@@ -141,6 +163,7 @@ function HomePage({ onFindStay }: HomePageProps) {
 
             <label className="search-field">
               <span>Adults</span>
+
               <input
                 type="number"
                 min="1"
@@ -155,6 +178,7 @@ function HomePage({ onFindStay }: HomePageProps) {
 
             <label className="search-field">
               <span>Children</span>
+
               <input
                 type="number"
                 min="0"
@@ -168,6 +192,7 @@ function HomePage({ onFindStay }: HomePageProps) {
 
             <label className="search-field">
               <span>Rooms</span>
+
               <input
                 type="number"
                 min="1"
@@ -180,28 +205,45 @@ function HomePage({ onFindStay }: HomePageProps) {
               />
             </label>
 
-            <button className="primary-button search-banner-button" type="submit">
+            <button
+              className="primary-button search-banner-button"
+              type="submit"
+            >
               Find stays
             </button>
           </div>
         </form>
       </div>
 
-      <section className="stays-section">
+      <section className="stays-section" id="locations">
         <div className="section-heading">
           <div>
             <p className="eyebrow">FIND YOUR SPACE</p>
+
             <h2>Discover our destinations</h2>
+
             <p>Wherever you are going, find a place to feel at home.</p>
           </div>
 
-          <button
-            className="text-button"
-            type="button"
-            onClick={() => onFindStay()}
-          >
-            View all destinations →
-          </button>
+          <div className="branch-view-toggle">
+            <button
+              type="button"
+              className={view === "map" ? "active" : ""}
+              aria-pressed={view === "map"}
+              onClick={() => handleViewChange("map")}
+            >
+              Map view
+            </button>
+
+            <button
+              type="button"
+              className={view === "list" ? "active" : ""}
+              aria-pressed={view === "list"}
+              onClick={() => handleViewChange("list")}
+            >
+              List view
+            </button>
+          </div>
         </div>
 
         <div className="home-stays-grid">
@@ -212,20 +254,29 @@ function HomePage({ onFindStay }: HomePageProps) {
               key={stay.location}
               onClick={() => onFindStay(stay.location)}
             >
-              <img src={stay.image} alt={`${stay.location} destination`} />
+              <img
+                src={stay.image}
+                alt={`${stay.location} destination`}
+              />
 
               <span className="home-stay-info">
                 <strong>{stay.location}</strong>
+
                 <span>{stay.description}</span>
+
                 <span className="card-link">Explore stay →</span>
               </span>
             </button>
           ))}
         </div>
+
+        <BranchLocations
+          view={view}
+          selectedBranchId={selectedBranchId}
+        />
       </section>
     </main>
   );
 }
 
 export default HomePage;
-
