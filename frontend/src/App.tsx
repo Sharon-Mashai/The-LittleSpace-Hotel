@@ -52,8 +52,11 @@ type GuestLayoutProps = {
 };
 
 function GuestLayout({ onFindStay }: GuestLayoutProps) {
+  const { pathname } = useLocation();
+  const isAuthPage = pathname === "/sign-in" || pathname === "/register";
+
   return (
-    <div className="site">
+    <div className={`site${isAuthPage ? " auth-page-layout" : ""}`}>
       <Navbar />
 
       <Routes>

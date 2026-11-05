@@ -1,3 +1,5 @@
+import PasswordInput from "../../components/PasswordInput";
+
 function SettingsPage() {
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,17 +34,15 @@ function SettingsPage() {
           <h2>Security</h2>
 
           <label htmlFor="current-password">Current password</label>
-          <input
+          <PasswordInput
             id="current-password"
-            type="password"
             autoComplete="current-password"
             placeholder="Enter current password"
           />
 
           <label htmlFor="new-password">New password</label>
-          <input
+          <PasswordInput
             id="new-password"
-            type="password"
             autoComplete="new-password"
             placeholder="Enter new password"
             minLength={8}

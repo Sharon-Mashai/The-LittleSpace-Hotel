@@ -940,7 +940,8 @@ img {
   text-align: left;
 }
 
-.auth-form > input {
+.auth-form > input,
+.auth-form > .password-input-wrapper > input {
   width: 100%;
   min-height: 49px;
   padding: 0 14px;
@@ -954,11 +955,13 @@ img {
     box-shadow 0.2s ease;
 }
 
-.auth-form > input::placeholder {
+.auth-form > input::placeholder,
+.auth-form > .password-input-wrapper > input::placeholder {
   color: #aaa197;
 }
 
-.auth-form > input:focus {
+.auth-form > input:focus,
+.auth-form > .password-input-wrapper > input:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(112, 91, 71, 0.1);
@@ -968,6 +971,35 @@ img {
   width: 100%;
   min-height: 49px;
   margin-top: 14px;
+}
+
+.password-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-input-wrapper > input {
+  padding-right: 44px !important;
+}
+
+.password-visibility-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: #777;
+  cursor: pointer;
+}
+
+.password-visibility-toggle svg {
+  width: 18px;
+  height: 18px;
 }
 
 .auth-form h2 {
@@ -1408,6 +1440,116 @@ img {
 
   .confirmation-state h1 {
     font-size: 32px;
+  }
+}
+
+.site.auth-page-layout {
+  height: 100vh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.auth-page-layout > .site-header,
+.auth-page-layout > .site-footer {
+  flex: 0 0 auto;
+}
+
+.auth-page-layout > .site-footer {
+  gap: 4px;
+  padding: 8px 5%;
+}
+
+.auth-page-layout > .site-footer p {
+  margin: 0;
+}
+
+.auth-page-layout > .auth-screen {
+  min-height: 0;
+  flex: 1 1 auto;
+  gap: 12px;
+  overflow: hidden;
+  padding: clamp(12px, 2.5vh, 28px) 5%;
+}
+
+.auth-screen .auth-card {
+  padding: clamp(16px, 2.5vh, 32px);
+}
+
+.auth-screen .auth-card > .eyebrow {
+  margin-bottom: 8px;
+}
+
+.auth-screen .auth-form {
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.auth-screen .auth-form > label:not(.filter-option) {
+  margin-top: 4px;
+}
+
+.auth-screen .auth-form > input,
+.auth-screen .auth-form > .password-input-wrapper > input {
+  min-height: 43px;
+}
+
+.auth-screen .auth-form .primary-button {
+  min-height: 43px;
+  margin-top: 8px;
+}
+
+.auth-screen .auth-switch {
+  margin-top: 14px;
+}
+
+.auth-screen .auth-guest {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+@media (max-height: 700px) {
+  .auth-screen .auth-card {
+    padding: 12px 22px;
+  }
+
+  .auth-screen .auth-card > h1 {
+    font-size: 29px;
+  }
+
+  .auth-screen .auth-card > p:not(.eyebrow) {
+    margin: 6px 0;
+    font-size: 12px;
+  }
+
+  .auth-screen .auth-form {
+    gap: 4px;
+    margin-top: 8px;
+  }
+
+  .auth-screen .auth-form > label:not(.filter-option) {
+    margin-top: 2px;
+    font-size: 12px;
+  }
+
+  .auth-screen .auth-form > input,
+  .auth-screen .auth-form > .password-input-wrapper > input {
+    min-height: 36px;
+  }
+
+  .auth-screen .auth-form .primary-button {
+    min-height: 36px;
+    margin-top: 4px;
+  }
+
+  .auth-screen .auth-switch {
+    margin-top: 8px;
+  }
+
+  .auth-screen .auth-guest {
+    margin-top: 6px;
+    padding-top: 6px;
   }
 }
 .profile-avatar-link {

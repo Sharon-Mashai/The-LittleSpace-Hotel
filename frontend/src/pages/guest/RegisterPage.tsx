@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerGuest } from "../../services/auth";
+import PasswordInput from "../../components/PasswordInput";
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ function RegisterPage() {
   }
 
   return (
-    <main className="account-page">
+    <main className="account-page auth-screen">
       <section className="auth-card">
         <p className="eyebrow">JOIN LITTLESPACE</p>
         <h1>Create your account</h1>
@@ -85,9 +86,8 @@ function RegisterPage() {
           />
 
           <label htmlFor="register-password">Password</label>
-          <input
+          <PasswordInput
             id="register-password"
-            type="password"
             placeholder="Create a password"
             autoComplete="new-password"
             minLength={8}
@@ -97,9 +97,8 @@ function RegisterPage() {
           />
 
           <label htmlFor="register-confirm-password">Confirm password</label>
-          <input
+          <PasswordInput
             id="register-confirm-password"
-            type="password"
             placeholder="Confirm your password"
             autoComplete="new-password"
             minLength={8}
@@ -128,4 +127,3 @@ function RegisterPage() {
 }
 
 export default RegisterPage;
-

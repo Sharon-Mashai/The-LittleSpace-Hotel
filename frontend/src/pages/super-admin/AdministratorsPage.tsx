@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { apiRequest } from "../../services/api";
 import { getAuthToken } from "../../services/auth";
 import ConfirmationModal from "../../components/ConfirmationModal";
+import PasswordInput from "../../components/PasswordInput";
 
 type Administrator = {
   id: number;
@@ -704,9 +705,8 @@ function AdministratorsPage() {
 
           <div className="admin-form-field">
             <label htmlFor="admin-password">Temporary password</label>
-            <input
+            <PasswordInput
               id="admin-password"
-              type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               minLength={8}

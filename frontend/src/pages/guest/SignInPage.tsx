@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { loginUser } from "../../services/auth";
+import PasswordInput from "../../components/PasswordInput";
 
 function SignInPage() {
   const navigate = useNavigate();
@@ -48,10 +49,10 @@ function SignInPage() {
   }
 
   return (
-    <main className="account-page">
+    <main className="account-page auth-screen">
       <section className="auth-card">
         <p className="eyebrow">WELCOME BACK</p>
-        <h1>Sign in to LittleSpace</h1>
+        <h1>Sign in to The LittleSpace</h1>
         <p>Access your account and manage your stays.</p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
@@ -67,9 +68,8 @@ function SignInPage() {
           />
 
           <label htmlFor="signin-password">Password</label>
-          <input
+          <PasswordInput
             id="signin-password"
-            type="password"
             placeholder="Enter your password"
             autoComplete="current-password"
             value={password}
