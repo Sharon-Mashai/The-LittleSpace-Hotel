@@ -1,8 +1,34 @@
+import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { requestPasswordReset } from "../../services/auth";
 
 function ForgotPasswordPage() {
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    setMessage("");
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await requestPasswordReset(email.trim());
+
+      setMessage(response.message);
+      setEmail("");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to process your request. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -22,11 +48,26 @@ function ForgotPasswordPage() {
             type="email"
             placeholder="Enter your email address"
             autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
             required
+            disabled={loading}
           />
 
-          <button className="primary-button" type="submit">
-            Request Password Reset
+          {message && (
+            <p className="auth-success" role="status">
+              {message}
+            </p>
+          )}
+
+          {error && (
+            <p className="auth-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <button className="primary-button" type="submit" disabled={loading}>
+            {loading ? "Sending..." : "Request Password Reset"}
           </button>
         </form>
 

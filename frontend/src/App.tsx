@@ -24,6 +24,7 @@ import AdminRoomTypesPage from "./pages/Admin/AdminRoomTypesPage";
 import SuperAdminDashboardPage from "./pages/super-admin/SuperAdminDashboardPage";
 import AdministratorsPage from "./pages/super-admin/AdministratorsPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import ResetPasswordPage from "./pages/guest/ResetPasswordPage";
 import "./App.css";
 
 function HotelsRoute() {
@@ -70,6 +71,7 @@ function GuestLayout({ onFindStay }: GuestLayoutProps) {
         <Route path="/profile/favourites" element={<FavouritesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
           path="/booking-confirmation"
           element={<BookingConfirmationPage />}
