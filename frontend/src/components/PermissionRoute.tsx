@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { getLoggedInUser } from "../services/auth";
+import { useAppSelector } from "../app/hooks";
 import { getAdminPermissions, type AdminPermission,} from "../services/adminPermissions";
 
 type PermissionRouteProps = {
@@ -8,7 +8,8 @@ type PermissionRouteProps = {
 };
 
 function PermissionRoute({ requiredPermission }: PermissionRouteProps) {
-  const user = getLoggedInUser();
+  const user = useAppSelector((state) => state.auth.user);
+
   const userId = user?.id;
   const userRole = user?.role;
 
