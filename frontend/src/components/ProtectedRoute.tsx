@@ -1,14 +1,16 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { getLoggedInUser, type UserRole } from "../services/auth";
+import { useAppSelector } from "../app/hooks";
+import type { UserRole } from "../services/auth";
 
 type ProtectedRouteProps = {
   allowedRoles: UserRole[];
 };
 
 function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
-  const user = getLoggedInUser();
+  // Get the authenticated user from Redux.
+  const user = useAppSelector((state) => state.auth.user);
 
-  // No authenticated user: return to sign-in.
+  // No authenticated user, return to sign-in.
   if (!user) {
     return <Navigate to="/home" replace />;
   }
