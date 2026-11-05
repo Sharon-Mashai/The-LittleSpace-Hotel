@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "../../services/api";
 import { getAuthToken } from "../../services/auth";
 import { getAdminPermissions, type AdminPermission,} from "../../services/adminPermissions";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 type AdminBranch = {
   id: number;
@@ -71,6 +72,8 @@ function AdminBranchesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingBranchConfirmation, setPendingBranchConfirmation] =
+    useState<AdminBranch | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -264,14 +267,6 @@ function AdminBranchesPage() {
 
     const newStatus = !branch.is_active;
 
-    const confirmed = window.confirm(
-      `Are you sure you want to ${
-        newStatus ? "activate" : "deactivate"
-      } ${branch.name}?`,
-    );
-
-    if (!confirmed) return;
-
     setError("");
     setMessage("");
 
@@ -433,7 +428,7 @@ function AdminBranchesPage() {
                     className={`admin-branch-status-button ${
                       branch.is_active ? "deactivate" : "activate"
                     }`}
-                    onClick={() => void toggleBranchStatus(branch)}
+                    onClick={() => setPendingBranchConfirmation(branch)}
                   >
                     {branch.is_active ? "Deactivate" : "Activate"}
                   </button>
@@ -624,6 +619,27 @@ function AdminBranchesPage() {
             </form>
           </section>
         </div>
+      )}
+      {pendingBranchConfirmation && (
+        <ConfirmationModal
+          title={`Are you sure you want to ${
+            pendingBranchConfirmation.is_active ? "deactivate" : "activate"
+          } this branch?`}
+          message={`${pendingBranchConfirmation.name} will be ${
+            pendingBranchConfirmation.is_active ? "deactivated" : "activated"
+          }.`}
+          confirmText={
+            pendingBranchConfirmation.is_active ? "Deactivate" : "Activate"
+          }
+          icon={pendingBranchConfirmation.is_active ? "!" : "✓"}
+          variant={pendingBranchConfirmation.is_active ? "danger" : "confirm"}
+          onCancel={() => setPendingBranchConfirmation(null)}
+          onConfirm={() => {
+            const branch = pendingBranchConfirmation;
+            setPendingBranchConfirmation(null);
+            void toggleBranchStatus(branch);
+          }}
+        />
       )}
     </div>
   );

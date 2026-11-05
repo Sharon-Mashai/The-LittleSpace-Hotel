@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "../../services/api";
 import { getAuthToken } from "../../services/auth";
 import { getAdminPermissions, type AdminPermission,} from "../../services/adminPermissions";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 type AdminBranch = {
   id: number;
@@ -115,6 +116,8 @@ function AdminRoomTypesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingRoomTypeConfirmation, setPendingRoomTypeConfirmation] =
+    useState<AdminRoomType | null>(null);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -370,14 +373,6 @@ function AdminRoomTypesPage() {
 
     const newStatus = !roomType.is_active;
 
-    const confirmed = window.confirm(
-      `Are you sure you want to ${
-        newStatus ? "activate" : "deactivate"
-      } ${roomType.name}?`,
-    );
-
-    if (!confirmed) return;
-
     setError("");
     setMessage("");
 
@@ -596,7 +591,7 @@ function AdminRoomTypesPage() {
                       className={`admin-branch-status-button ${
                         roomType.is_active ? "deactivate" : "activate"
                       }`}
-                      onClick={() => void toggleRoomTypeStatus(roomType)}
+                      onClick={() => setPendingRoomTypeConfirmation(roomType)}
                     >
                       {roomType.is_active ? "Deactivate" : "Activate"}
                     </button>
@@ -780,6 +775,29 @@ function AdminRoomTypesPage() {
             </form>
           </section>
         </div>
+      )}
+      {pendingRoomTypeConfirmation && (
+        <ConfirmationModal
+          title={`Are you sure you want to ${
+            pendingRoomTypeConfirmation.is_active ? "deactivate" : "activate"
+          } this room type?`}
+          message={`${pendingRoomTypeConfirmation.name} will be ${
+            pendingRoomTypeConfirmation.is_active
+              ? "deactivated"
+              : "activated"
+          }.`}
+          confirmText={
+            pendingRoomTypeConfirmation.is_active ? "Deactivate" : "Activate"
+          }
+          icon={pendingRoomTypeConfirmation.is_active ? "!" : "✓"}
+          variant={pendingRoomTypeConfirmation.is_active ? "danger" : "confirm"}
+          onCancel={() => setPendingRoomTypeConfirmation(null)}
+          onConfirm={() => {
+            const roomType = pendingRoomTypeConfirmation;
+            setPendingRoomTypeConfirmation(null);
+            void toggleRoomTypeStatus(roomType);
+          }}
+        />
       )}
     </div>
   );

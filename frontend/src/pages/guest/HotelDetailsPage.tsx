@@ -19,6 +19,7 @@ import {
 } from "../../services/bookingHistory";
 import { getAuthToken } from "../../services/auth";
 import BranchMap from "../../components/BranchMap";
+import Toast from "../../components/Toast";
 
 // Return today's date in YYYY-MM-DD format using the guest's local date.
 function getTodayDateString() {
@@ -693,8 +694,6 @@ function HotelDetailsPage() {
 
             {reviewSubmitError && <p role="alert">{reviewSubmitError}</p>}
 
-            {reviewSubmitSuccess && <p role="status">{reviewSubmitSuccess}</p>}
-
             <button
               className="primary-button"
               type="submit"
@@ -930,6 +929,11 @@ function HotelDetailsPage() {
           </form>
         </section>
       )}
+
+      <Toast
+        message={reviewSubmitSuccess}
+        onDismiss={() => setReviewSubmitSuccess("")}
+      />
 
       <p>
         <Link to="/hotels">Back to hotels</Link>

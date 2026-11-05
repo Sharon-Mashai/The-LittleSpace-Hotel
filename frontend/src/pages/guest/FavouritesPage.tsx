@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getGuestFavourites, removeGuestFavourite, type GuestFavourite,} from "../../services/favourites";
+import ConfirmationModal from "../../components/ConfirmationModal";
+import Toast from "../../components/Toast";
 
 function FavouritesPage() {
   const navigate = useNavigate();
@@ -9,6 +11,10 @@ function FavouritesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<GuestFavourite | null>(
+    null,
+  );
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     async function loadFavourites() {
@@ -44,6 +50,8 @@ function FavouritesPage() {
       setFavourites((current) =>
         current.filter((favourite) => favourite.branch_id !== branchId),
       );
+      setPendingRemoval(null);
+      setSuccessMessage("Favourite removed.");
     } catch (err) {
       setError(
         err instanceof Error
@@ -63,7 +71,7 @@ function FavouritesPage() {
         <p>Keep track of the LittleSpace stays you love.</p>
       </section>
 
-      {error && (
+      {error && !pendingRemoval && (
         <p className="auth-error" role="alert">
           {error}
         </p>
@@ -112,21 +120,42 @@ function FavouritesPage() {
                 <button
                   className="secondary-button"
                   type="button"
-                  onClick={() => handleRemoveFavourite(favourite.branch_id)}
+                  onClick={() => {
+                    setError("");
+                    setPendingRemoval(favourite);
+                  }}
                   disabled={removingId === favourite.branch_id}
                 >
-                  {removingId === favourite.branch_id
-                    ? "Removing..."
-                    : "Remove favourite"}
+                  Remove favourite
                 </button>
               </div>
             </article>
           ))}
         </section>
       )}
+      {pendingRemoval && (
+        <ConfirmationModal
+          title="Remove this favourite?"
+          message={`Remove ${pendingRemoval.name} from your favourites?`}
+          confirmText="Remove favourite"
+          icon="!"
+          variant="danger"
+          isBusy={removingId === pendingRemoval.branch_id}
+          error={error}
+          busyText="Removing..."
+          onCancel={() => {
+            setPendingRemoval(null);
+            setError("");
+          }}
+          onConfirm={() => void handleRemoveFavourite(pendingRemoval.branch_id)}
+        />
+      )}
+      <Toast
+        message={successMessage}
+        onDismiss={() => setSuccessMessage("")}
+      />
     </main>
   );
 }
 
 export default FavouritesPage;
-

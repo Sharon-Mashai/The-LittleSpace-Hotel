@@ -5,6 +5,7 @@ import {
   updateGuestProfile,
   type GuestProfile,
 } from "../../services/profile";
+import Toast from "../../components/Toast";
 
 function ProfilePage() {
   const navigate = useNavigate();
@@ -135,8 +136,6 @@ function ProfilePage() {
             </p>
           )}
 
-          {success && <p role="status">{success}</p>}
-
           <button className="primary-button" type="submit" disabled={saving}>
             {saving ? "Saving changes..." : "Save Changes"}
           </button>
@@ -146,9 +145,9 @@ function ProfilePage() {
           **Member since:** {new Date(profile.created_at).toLocaleDateString()}
         </p>
       </section>
+      <Toast message={success} onDismiss={() => setSuccess("")} />
     </main>
   );
 }
 
 export default ProfilePage;
-

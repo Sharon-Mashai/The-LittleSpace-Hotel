@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "../../services/api";
 import { getAuthToken } from "../../services/auth";
+import ConfirmationModal from "../../components/ConfirmationModal";
+import Toast from "../../components/Toast";
 import {
   getAdminPermissions,
   type AdminPermission,
@@ -51,10 +53,16 @@ type BookingUpdateResponse = {
   };
 };
 
+type BookingAction = "confirmed" | "cancelled" | "rejected";
+
+type PendingAction = {
+  booking: AdminBooking;
+  status: BookingAction;
+};
+
 function formatDate(date: string): string {
   if (!date) return "Not available";
 
-  // Extract the date portion without converting it through UTC.
   const dateOnly = date.slice(0, 10);
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateOnly);
 
@@ -62,7 +70,6 @@ function formatDate(date: string): string {
 
   const [, year, month, day] = match;
 
-  // Create the date using local date components.
   const localDate = new Date(Number(year), Number(month) - 1, Number(day));
 
   return localDate.toLocaleDateString("en-ZA", {
@@ -86,12 +93,17 @@ function BookingsPage() {
   const [updatingBookingId, setUpdatingBookingId] = useState<number | null>(
     null,
   );
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(
+    null,
+  );
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
   const canConfirm = permissions.includes("bookings.confirm");
   const canCancel = permissions.includes("bookings.cancel");
   const canReject = permissions.includes("bookings.reject");
+
+  const isUpdating = updatingBookingId !== null;
 
   useEffect(() => {
     let isMounted = true;
@@ -140,20 +152,16 @@ function BookingsPage() {
     };
   }, []);
 
+  function openConfirmationModal(booking: AdminBooking, status: BookingAction) {
+    setError("");
+    setSuccessMessage("");
+    setPendingAction({ booking, status });
+  }
+
   async function updateBookingStatus(
     booking: AdminBooking,
-    newStatus: "confirmed" | "cancelled" | "rejected",
+    newStatus: BookingAction,
   ) {
-    const actionMessages = {
-      confirmed: `confirm booking ${booking.booking_reference}? The booking must already have a successful payment.`,
-      cancelled: `cancel booking ${booking.booking_reference}?`,
-      rejected: `reject booking ${booking.booking_reference}?`,
-    };
-
-    const shouldProceed = window.confirm(actionMessages[newStatus]);
-
-    if (!shouldProceed) return;
-
     const token = getAuthToken();
 
     if (!token) {
@@ -184,6 +192,7 @@ function BookingsPage() {
       );
 
       setSuccessMessage(response.message);
+      setPendingAction(null);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Unable to update this booking.",
@@ -212,6 +221,26 @@ function BookingsPage() {
     );
   }
 
+  const modalContent = pendingAction
+    ? {
+        confirmed: {
+          title: "Confirm this booking?",
+          message: `Are you sure you want to confirm booking ${pendingAction.booking.booking_reference}? The guest will receive a booking confirmation email. Make sure the payment has been successful.`,
+          buttonText: "Yes, confirm booking",
+        },
+        cancelled: {
+          title: "Cancel this booking?",
+          message: `Are you sure you want to cancel booking ${pendingAction.booking.booking_reference}? This action will update the booking status. Any successful payment will not be automatically refunded.`,
+          buttonText: "Yes, cancel booking",
+        },
+        rejected: {
+          title: "Reject this booking?",
+          message: `Are you sure you want to reject booking ${pendingAction.booking.booking_reference}?`,
+          buttonText: "Yes, reject booking",
+        },
+      }[pendingAction.status]
+    : null;
+
   return (
     <div className="admin-page">
       <div className="admin-page-header">
@@ -233,11 +262,10 @@ function BookingsPage() {
         </p>
       )}
 
-      {successMessage && (
-        <p className="admin-message admin-message-success" role="status">
-          {successMessage}
-        </p>
-      )}
+      <Toast
+        message={successMessage}
+        onDismiss={() => setSuccessMessage("")}
+      />
 
       {bookings.length === 0 ? (
         <div className="admin-empty-state">
@@ -247,7 +275,7 @@ function BookingsPage() {
       ) : (
         <div className="admin-bookings-list">
           {bookings.map((booking) => {
-            const isUpdating = updatingBookingId === booking.id;
+            const bookingIsUpdating = updatingBookingId === booking.id;
             const isPending = booking.status === "pending";
             const canBeCancelled = isPending || booking.status === "confirmed";
 
@@ -339,12 +367,12 @@ function BookingsPage() {
                       <button
                         type="button"
                         className="admin-action-button confirm-button"
-                        disabled={isUpdating}
+                        disabled={bookingIsUpdating || isUpdating}
                         onClick={() =>
-                          updateBookingStatus(booking, "confirmed")
+                          openConfirmationModal(booking, "confirmed")
                         }
                       >
-                        {isUpdating ? "Updating..." : "Confirm booking"}
+                        {bookingIsUpdating ? "Updating..." : "Confirm booking"}
                       </button>
                     )}
 
@@ -352,12 +380,12 @@ function BookingsPage() {
                       <button
                         type="button"
                         className="admin-action-button cancel-button"
-                        disabled={isUpdating}
+                        disabled={bookingIsUpdating || isUpdating}
                         onClick={() =>
-                          updateBookingStatus(booking, "cancelled")
+                          openConfirmationModal(booking, "cancelled")
                         }
                       >
-                        {isUpdating ? "Updating..." : "Cancel booking"}
+                        {bookingIsUpdating ? "Updating..." : "Cancel booking"}
                       </button>
                     )}
 
@@ -365,10 +393,12 @@ function BookingsPage() {
                       <button
                         type="button"
                         className="admin-action-button reject-button"
-                        disabled={isUpdating}
-                        onClick={() => updateBookingStatus(booking, "rejected")}
+                        disabled={bookingIsUpdating || isUpdating}
+                        onClick={() =>
+                          openConfirmationModal(booking, "rejected")
+                        }
                       >
-                        {isUpdating ? "Updating..." : "Reject booking"}
+                        {bookingIsUpdating ? "Updating..." : "Reject booking"}
                       </button>
                     )}
                   </div>
@@ -377,6 +407,25 @@ function BookingsPage() {
             );
           })}
         </div>
+      )}
+
+      {pendingAction && modalContent && (
+        <ConfirmationModal
+          title={modalContent.title}
+          message={modalContent.message}
+          confirmText={modalContent.buttonText}
+          icon={pendingAction.status === "confirmed" ? "✓" : "!"}
+          variant={pendingAction.status === "confirmed" ? "confirm" : "danger"}
+          isBusy={isUpdating}
+          error={error}
+          onCancel={() => {
+            setPendingAction(null);
+            setError("");
+          }}
+          onConfirm={() =>
+            updateBookingStatus(pendingAction.booking, pendingAction.status)
+          }
+        />
       )}
     </div>
   );

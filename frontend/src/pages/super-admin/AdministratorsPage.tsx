@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { apiRequest } from "../../services/api";
 import { getAuthToken } from "../../services/auth";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 type Administrator = {
   id: number;
@@ -33,6 +34,15 @@ type EditAdministratorForm = {
   phone: string;
 };
 
+type PendingConfirmation = {
+  title: string;
+  message: string;
+  confirmText: string;
+  icon: string;
+  variant: "confirm" | "danger";
+  onConfirm: () => void;
+};
+
 function AdministratorsPage() {
   const [administrators, setAdministrators] = useState<Administrator[]>([]);
   const [search, setSearch] = useState("");
@@ -56,6 +66,8 @@ function AdministratorsPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [changingStatusId, setChangingStatusId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [pendingConfirmation, setPendingConfirmation] =
+    useState<PendingConfirmation | null>(null);
 
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
@@ -302,13 +314,6 @@ function AdministratorsPage() {
     }
 
     const nextStatus = !administrator.is_active;
-    const action = nextStatus ? "enable" : "disable";
-
-    const confirmed = window.confirm(
-      `Are you sure you want to ${action} ${administrator.full_name}'s account?`,
-    );
-
-    if (!confirmed) return;
 
     try {
       setChangingStatusId(administrator.id);
@@ -346,12 +351,6 @@ function AdministratorsPage() {
       setError("Your session has expired. Please sign in again.");
       return;
     }
-
-    const confirmed = window.confirm(
-      `Are you sure you want to permanently delete ${administrator.full_name}'s account?\n\nThis action cannot be undone. Accounts linked to bookings or reviews cannot be deleted.`,
-    );
-
-    if (!confirmed) return;
 
     try {
       setDeletingId(administrator.id);
@@ -575,7 +574,21 @@ function AdministratorsPage() {
                                 role="menuitem"
                                 onClick={() => {
                                   setOpenMenuId(null);
-                                  void handleToggleStatus(administrator);
+                                  const nextStatus = !administrator.is_active;
+                                  setPendingConfirmation({
+                                    title: `Are you sure you want to ${
+                                      nextStatus ? "enable" : "disable"
+                                    } this account?`,
+                                    message: `${administrator.full_name}'s account will be ${
+                                      nextStatus ? "enabled" : "disabled"
+                                    }.`,
+                                    confirmText: nextStatus ? "Enable" : "Disable",
+                                    icon: nextStatus ? "✓" : "!",
+                                    variant: nextStatus ? "confirm" : "danger",
+                                    onConfirm: () => {
+                                      void handleToggleStatus(administrator);
+                                    },
+                                  });
                                 }}
                                 disabled={
                                   changingStatusId === administrator.id ||
@@ -595,7 +608,18 @@ function AdministratorsPage() {
                                 role="menuitem"
                                 onClick={() => {
                                   setOpenMenuId(null);
-                                  void handleDeleteAdministrator(administrator);
+                                  setPendingConfirmation({
+                                    title: "Permanently delete this account?",
+                                    message: `Are you sure you want to permanently delete ${administrator.full_name}'s account? This action cannot be undone. Accounts linked to bookings or reviews cannot be deleted.`,
+                                    confirmText: "Delete account",
+                                    icon: "!",
+                                    variant: "danger",
+                                    onConfirm: () => {
+                                      void handleDeleteAdministrator(
+                                        administrator,
+                                      );
+                                    },
+                                  });
                                 }}
                                 disabled={
                                   deletingId === administrator.id ||
@@ -820,6 +844,21 @@ function AdministratorsPage() {
             </form>
           </section>
         </div>
+      )}
+      {pendingConfirmation && (
+        <ConfirmationModal
+          title={pendingConfirmation.title}
+          message={pendingConfirmation.message}
+          confirmText={pendingConfirmation.confirmText}
+          icon={pendingConfirmation.icon}
+          variant={pendingConfirmation.variant}
+          onCancel={() => setPendingConfirmation(null)}
+          onConfirm={() => {
+            const confirmation = pendingConfirmation;
+            setPendingConfirmation(null);
+            confirmation.onConfirm();
+          }}
+        />
       )}
     </div>
   );
