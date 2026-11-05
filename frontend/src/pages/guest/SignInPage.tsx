@@ -1,10 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAppDispatch } from "../../app/hooks";
+import { setAuthenticatedUser } from "../../features/auth/authSlice";
 import { loginUser } from "../../services/auth";
 import PasswordInput from "../../components/PasswordInput";
 
 function SignInPage() {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +22,9 @@ function SignInPage() {
 
     try {
       const user = await loginUser(email, password);
+
+      // Update the shared Redux authentication state.
+      dispatch(setAuthenticatedUser(user));
 
       switch (user.role) {
         case "guest":
@@ -93,7 +99,7 @@ function SignInPage() {
         </form>
 
         <p className="auth-switch">
-          Don't have an account? <Link to="/register">Create an account</Link>
+          Don't have an account? <Link to="/register">Create anaccount</Link>
         </p>
 
         <p className="auth-guest">
