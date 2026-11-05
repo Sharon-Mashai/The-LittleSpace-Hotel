@@ -1,12 +1,19 @@
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { getLoggedInGuest, logoutGuest } from "../services/auth";
+import { useAppDispatch, useAppSelector } from "../app/hooks";
+import { clearAuthenticatedUser } from "../features/auth/authSlice";
+import { logoutGuest } from "../services/auth";
 
 function Navbar() {
- 
   useLocation();
 
   const navigate = useNavigate();
-  const guest = getLoggedInGuest();
+  const dispatch = useAppDispatch();
+
+  // Read the authenticated user from Redux.
+  const user = useAppSelector((state) => state.auth.user);
+
+  // Only guest accounts should see the guest navigation options.
+  const guest = user?.role === "guest" ? user : null;
 
   const initials = guest?.full_name
     .trim()
@@ -18,6 +25,10 @@ function Navbar() {
 
   function handleSignOut() {
     logoutGuest();
+
+    // Clear the authenticated user from Redux.
+    dispatch(clearAuthenticatedUser());
+
     navigate("/");
   }
 
@@ -29,7 +40,9 @@ function Navbar() {
       </Link>
 
       <nav className="main-nav" aria-label="Main navigation">
-        <NavLink to="/" end> Home </NavLink>
+        <NavLink to="/" end>
+          Home
+        </NavLink>
 
         <NavLink to="/hotels">Hotels</NavLink>
 
@@ -39,14 +52,20 @@ function Navbar() {
           <>
             <NavLink to="/profile/favourites">Favourites</NavLink>
 
-            <NavLink to="/profile"className="profile-avatar-link"
+            <NavLink
+              to="/profile"
+              className="profile-avatar-link"
               aria-label={`My profile, ${guest.full_name}`}
               title="My Profile"
             >
               <span className="profile-avatar">{initials}</span>
             </NavLink>
 
-            <button type="button" className="nav-logout" onClick={handleSignOut}>
+            <button
+              type="button"
+              className="nav-logout"
+              onClick={handleSignOut}
+            >
               Sign Out
             </button>
           </>
