@@ -20,6 +20,22 @@ function isValidDate(value: unknown): value is string {
   );
 }
 
+// Get today's date using South African time.
+function getTodayDateString(): string {
+  const dateParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Johannesburg",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const year = dateParts.find((part) => part.type === "year")?.value;
+  const month = dateParts.find((part) => part.type === "month")?.value;
+  const day = dateParts.find((part) => part.type === "day")?.value;
+
+  return `${year}-${month}-${day}`;
+}
+
 // GET /api/bookings
 // Retrieve bookings belonging to a signed-in customer.
 // Guests must use the OTP-protected guest booking access route.
@@ -153,6 +169,17 @@ router.post(
         success: false,
         message:
           "Provide valid branch and room type IDs, dates, guest counts, guest name, email and phone. Check-out must be after check-in.",
+      });
+      return;
+    }
+
+    // Reject booking dates that are earlier than today's date in South Africa.
+    const today = getTodayDateString();
+
+    if (checkIn < today || checkOut < today) {
+      res.status(400).json({
+        success: false,
+        message: "Check-in and check-out dates cannot be in the past.",
       });
       return;
     }

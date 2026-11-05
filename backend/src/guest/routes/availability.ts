@@ -15,6 +15,22 @@ function isValidDate(value: unknown): value is string {
   );
 }
 
+// Get today's date using South African time.
+function getTodayDateString(): string {
+  const dateParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Johannesburg",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const year = dateParts.find((part) => part.type === "year")?.value;
+  const month = dateParts.find((part) => part.type === "month")?.value;
+  const day = dateParts.find((part) => part.type === "day")?.value;
+
+  return `${year}-${month}-${day}`;
+}
+
 // GET /api/availability
 router.get("/", async (req, res) => {
   const branchId = Number(req.query.branchId);
@@ -44,9 +60,20 @@ router.get("/", async (req, res) => {
     return;
   }
 
+  const today = getTodayDateString();
+
+  if (checkIn < today || checkOut < today) {
+    res.status(400).json({
+      success: false,
+      message: "Check-in and check-out dates cannot be in the past.",
+    });
+    return;
+  }
+
   try {
     const result = await pool.query(
-      ` SELECT
+      `
+        SELECT
           rt.id,
           rt.branch_id,
           rt.name,
@@ -91,7 +118,13 @@ router.get("/", async (req, res) => {
     res.status(200).json({
       success: true,
       count: result.rows.length,
-      search: {branchId, checkIn, checkOut, adults, children,},
+      search: {
+        branchId,
+        checkIn,
+        checkOut,
+        adults,
+        children,
+      },
       data: result.rows,
     });
   } catch (error) {
