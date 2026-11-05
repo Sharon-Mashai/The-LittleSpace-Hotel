@@ -121,6 +121,61 @@ LittleSpace Hotel
   });
 }
 
+// Send a password reset link to a guest.
+export async function sendPasswordResetEmail(
+  guestEmail: string,
+  resetLink: string,
+  expiryMinutes = 30,
+): Promise<void> {
+  await emailTransporter.sendMail({
+    from: {
+      name: "LittleSpace Hotel",
+      address: process.env.SMTP_USER!,
+    },
+    to: guestEmail,
+    subject: "Reset Your LittleSpace Password",
+    text: `
+You requested to reset your LittleSpace Hotel account password.
+
+Click the link below to create a new password:
+
+${resetLink}
+
+This link expires in ${expiryMinutes} minutes and can only be used once.
+
+If you did not request a password reset, you can ignore this email.
+
+Kind regards,
+LittleSpace Hotel
+    `.trim(),
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; color: #333;">
+        <h2>LittleSpace Hotel</h2>
+        <h3>Password Reset Request</h3>
+
+        <p>You requested to reset your LittleSpace Hotel account password.</p>
+
+        <p>Click the button below to create a new password:</p>
+
+        <p style="margin: 25px 0;">
+          <a
+            href="${escapeHtml(resetLink)}"
+            style="background: #333; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;"
+          >
+            Reset Password
+          </a>
+        </p>
+
+        <p>This link expires in <strong>${expiryMinutes} minutes</strong> and can only be used once.</p>
+
+        <p>If you did not request a password reset, you can ignore this email.</p>
+
+        <p>Kind regards,<br />LittleSpace Hotel</p>
+      </div>
+    `,
+  });
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => {
     const entities: Record<string, string> = {
