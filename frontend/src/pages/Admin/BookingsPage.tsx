@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "../../services/api";
 import { getAuthToken } from "../../services/auth";
-import {getAdminPermissions, type AdminPermission,} from "../../services/adminPermissions";
+import {
+  getAdminPermissions,
+  type AdminPermission,
+} from "../../services/adminPermissions";
 
 type BookingRoom = {
   roomId: number;
@@ -51,7 +54,18 @@ type BookingUpdateResponse = {
 function formatDate(date: string): string {
   if (!date) return "Not available";
 
-  return new Date(`${date.slice(0, 10)}T00:00:00`).toLocaleDateString("en-ZA", {
+  // Extract the date portion without converting it through UTC.
+  const dateOnly = date.slice(0, 10);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateOnly);
+
+  if (!match) return "Not available";
+
+  const [, year, month, day] = match;
+
+  // Create the date using local date components.
+  const localDate = new Date(Number(year), Number(month) - 1, Number(day));
+
+  return localDate.toLocaleDateString("en-ZA", {
     day: "2-digit",
     month: "short",
     year: "numeric",

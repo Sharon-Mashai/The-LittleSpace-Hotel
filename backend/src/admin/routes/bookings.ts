@@ -1,6 +1,6 @@
-
 import { Router, type Response, type NextFunction } from "express";
 import { pool } from "../../config/db.js";
+import { sendBookingConfirmationEmail } from "../../config/emailService.js";
 import {
   authenticateAdmin,
   requirePermission,
@@ -49,8 +49,8 @@ router.get(
             b.guest_full_name,
             b.guest_email,
             b.guest_phone,
-            b.check_in,
-            b.check_out,
+            b.check_in::text AS check_in,
+            b.check_out::text AS check_out,
             b.adults,
             b.children,
             b.status,
@@ -128,14 +128,28 @@ router.patch(
     ) {
       res.status(400).json({
         success: false,
-        message:
-          'Status must be "confirmed", "cancelled", or "rejected".',
+        message: 'Status must be "confirmed", "cancelled", or "rejected".',
       });
       return;
     }
 
     const client = await pool.connect();
     let transactionStarted = false;
+
+    // These details are collected during confirmation,
+    // but the email is only sent after the transaction commits.
+    let confirmationEmailDetails: {
+      guestName: string;
+      guestEmail: string;
+      bookingReference: string;
+      branchName: string;
+      checkIn: string;
+      checkOut: string;
+      roomName: string;
+      nights: number;
+      totalAmount: string;
+      currency: string;
+    } | null = null;
 
     try {
       await client.query("BEGIN");
@@ -179,7 +193,7 @@ router.patch(
       const currentStatus = booking.status;
 
       if (requestedStatus === "confirmed") {
-        // Only pending bookings can be confirmed manually.
+        // Only pending bookings can be confirmed.
         if (currentStatus !== "pending") {
           await client.query("ROLLBACK");
           transactionStarted = false;
@@ -215,6 +229,58 @@ router.patch(
               "This booking cannot be confirmed because no successful payment was found.",
           });
           return;
+        }
+
+        // Retrieve the details required for the confirmation email.
+        const emailDetailsResult = await client.query(
+          `
+            SELECT
+              b.guest_full_name,
+              b.guest_email,
+              b.booking_reference,
+              b.check_in::text AS check_in,
+              b.check_out::text AS check_out,
+              (b.check_out - b.check_in)::integer AS nights,
+              b.total_amount::text AS total_amount,
+              b.currency,
+              COALESCE(
+                STRING_AGG(DISTINCT hb.name, ', '),
+                'LittleSpace Hotel'
+              ) AS branch_name,
+              COALESCE(
+                STRING_AGG(DISTINCT rt.name, ', '),
+                'Reserved room'
+              ) AS room_name
+            FROM bookings AS b
+            LEFT JOIN booking_rooms AS br
+              ON br.booking_id = b.id
+            LEFT JOIN rooms AS r
+              ON r.id = br.room_id
+            LEFT JOIN room_types AS rt
+              ON rt.id = r.room_type_id
+            LEFT JOIN hotel_branches AS hb
+              ON hb.id = rt.branch_id
+            WHERE b.id = $1
+            GROUP BY b.id
+          `,
+          [bookingId],
+        );
+
+        if (emailDetailsResult.rows.length > 0) {
+          const details = emailDetailsResult.rows[0];
+
+          confirmationEmailDetails = {
+            guestName: details.guest_full_name,
+            guestEmail: details.guest_email,
+            bookingReference: details.booking_reference,
+            branchName: details.branch_name,
+            checkIn: details.check_in,
+            checkOut: details.check_out,
+            roomName: details.room_name,
+            nights: Number(details.nights),
+            totalAmount: details.total_amount,
+            currency: details.currency,
+          };
         }
       } else if (requestedStatus === "cancelled") {
         // Pending or confirmed bookings can be cancelled.
@@ -331,13 +397,40 @@ router.patch(
         );
       }
 
+      // Commit the booking update before attempting to send an email.
       await client.query("COMMIT");
       transactionStarted = false;
 
       let successMessage: string;
+      let emailSent: boolean | undefined;
 
       if (requestedStatus === "confirmed") {
         successMessage = "Booking confirmed successfully.";
+        emailSent = false;
+
+        if (confirmationEmailDetails && confirmationEmailDetails.guestEmail) {
+          try {
+            await sendBookingConfirmationEmail(confirmationEmailDetails);
+
+            emailSent = true;
+
+            console.log(
+              `Booking confirmation email sent to ${confirmationEmailDetails.guestEmail}.`,
+            );
+          } catch (emailError) {
+            // Email failure must not undo a successful booking confirmation.
+            console.error(
+              "Booking was confirmed, but the confirmation email could not be sent:",
+              emailError,
+            );
+
+            successMessage =
+              "Booking confirmed successfully, but the confirmation email could not be sent.";
+          }
+        } else {
+          successMessage =
+            "Booking confirmed successfully, but guest email details could not be retrieved.";
+        }
       } else if (requestedStatus === "cancelled") {
         successMessage =
           "Booking cancelled successfully. No automatic refund was processed.";
@@ -349,6 +442,7 @@ router.patch(
         success: true,
         message: successMessage,
         data: updatedBooking,
+        ...(requestedStatus === "confirmed" ? { emailSent } : {}),
       });
     } catch (error) {
       if (transactionStarted) {
@@ -375,4 +469,3 @@ router.patch(
 );
 
 export default router;
-  
