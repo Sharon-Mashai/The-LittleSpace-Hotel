@@ -1,10 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAppDispatch } from "../../app/hooks";
+import { setAuthenticatedUser } from "../../features/auth/authSlice";
 import { registerGuest } from "../../services/auth";
 import PasswordInput from "../../components/PasswordInput";
 
 function RegisterPage() {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -31,7 +34,11 @@ function RegisterPage() {
     setLoading(true);
 
     try {
-      await registerGuest(fullName, email, password, phone);
+      const user = await registerGuest(fullName, email, password, phone);
+
+      // Update the shared Redux authentication state.
+      dispatch(setAuthenticatedUser(user));
+
       navigate("/");
     } catch (err) {
       setError(
