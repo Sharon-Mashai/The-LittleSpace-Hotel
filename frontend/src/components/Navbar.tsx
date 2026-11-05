@@ -29,7 +29,8 @@ function Navbar() {
     // Clear the authenticated user from Redux.
     dispatch(clearAuthenticatedUser());
 
-    navigate("/");
+    // Redirect to the sign-in page after signing out.
+    navigate("/sign-in", { replace: true });
   }
 
   return (
