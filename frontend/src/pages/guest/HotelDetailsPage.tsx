@@ -20,6 +20,16 @@ import {
 import { getAuthToken } from "../../services/auth";
 import BranchMap from "../../components/BranchMap";
 
+// Return today's date in YYYY-MM-DD format using the guest's local date.
+function getTodayDateString() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 function HotelDetailsPage() {
   const { hotelId } = useParams<{ hotelId: string }>();
 
@@ -67,6 +77,9 @@ function HotelDetailsPage() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewSubmitError, setReviewSubmitError] = useState("");
   const [reviewSubmitSuccess, setReviewSubmitSuccess] = useState("");
+
+  // Today's date is used as the earliest allowed check-in date.
+  const minimumBookingDate = getTodayDateString();
 
   // Load the selected branch and its room types using the branch slug.
   useEffect(() => {
@@ -178,6 +191,29 @@ function HotelDetailsPage() {
     };
   }, [branch]);
 
+  // Update check-in and clear an invalid check-out date if necessary.
+  function handleCheckInChange(newCheckIn: string) {
+    setCheckIn(newCheckIn);
+
+    if (checkOut && checkOut <= newCheckIn) {
+      setCheckOut("");
+    }
+
+    setAvailableRooms(null);
+    setSelectedRoom(null);
+    setAvailabilityError("");
+    setBookingError("");
+  }
+
+  // Update check-out and clear previous availability results.
+  function handleCheckOutChange(newCheckOut: string) {
+    setCheckOut(newCheckOut);
+    setAvailableRooms(null);
+    setSelectedRoom(null);
+    setAvailabilityError("");
+    setBookingError("");
+  }
+
   async function handleAvailabilitySearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -185,6 +221,17 @@ function HotelDetailsPage() {
 
     if (!checkIn || !checkOut) {
       setAvailabilityError("Please select both check-in and check-out dates.");
+      return;
+    }
+
+    // Prevent guests from searching for a stay that starts in the past.
+    if (checkIn < getTodayDateString()) {
+      setAvailabilityError("Check-in date cannot be in the past.");
+      return;
+    }
+
+    if (checkOut < getTodayDateString()) {
+      setAvailabilityError("Check-out date cannot be in the past.");
       return;
     }
 
@@ -240,6 +287,27 @@ function HotelDetailsPage() {
 
     if (!branch || !selectedRoom) {
       setBookingError("Please select an available room first.");
+      return;
+    }
+
+    // Validate dates again before creating the booking and starting payment.
+    if (!checkIn || !checkOut) {
+      setBookingError("Please select both check-in and check-out dates.");
+      return;
+    }
+
+    if (checkIn < getTodayDateString()) {
+      setBookingError("Check-in date cannot be in the past.");
+      return;
+    }
+
+    if (checkOut < getTodayDateString()) {
+      setBookingError("Check-out date cannot be in the past.");
+      return;
+    }
+
+    if (checkOut <= checkIn) {
+      setBookingError("Check-out must be after check-in.");
       return;
     }
 
@@ -686,7 +754,8 @@ function HotelDetailsPage() {
               id="checkIn"
               type="date"
               value={checkIn}
-              onChange={(event) => setCheckIn(event.target.value)}
+              min={minimumBookingDate}
+              onChange={(event) => handleCheckInChange(event.target.value)}
               required
             />
           </div>
@@ -697,8 +766,8 @@ function HotelDetailsPage() {
               id="checkOut"
               type="date"
               value={checkOut}
-              min={checkIn || undefined}
-              onChange={(event) => setCheckOut(event.target.value)}
+              min={checkIn || minimumBookingDate}
+              onChange={(event) => handleCheckOutChange(event.target.value)}
               required
             />
           </div>
