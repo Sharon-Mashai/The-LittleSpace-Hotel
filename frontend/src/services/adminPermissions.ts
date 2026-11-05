@@ -4,6 +4,7 @@ import { getAuthToken, getLoggedInUser } from "./auth";
 export type AdminPermission =
   | "dashboard.view"
   | "bookings.view"
+  | "bookings.confirm"
   | "bookings.cancel"
   | "bookings.reject"
   | "guests.view"
@@ -41,6 +42,7 @@ export async function getAdminPermissions(): Promise<AdminPermission[]> {
     return [
       "dashboard.view",
       "bookings.view",
+      "bookings.confirm",
       "bookings.cancel",
       "bookings.reject",
       "guests.view",

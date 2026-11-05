@@ -2429,7 +2429,15 @@ img {
 .reject-button:hover:not(:disabled) {
   background: #85211c;
 }
+.confirm-button {
+  border-color: #cce2ce;
+  background: #edf7ee;
+  color: #397246;
+}
 
+.confirm-button:hover:not(:disabled) {
+  background: #dcefe0;
+}
 .admin-message {
   margin: 0 0 20px;
   padding: 13px 16px;

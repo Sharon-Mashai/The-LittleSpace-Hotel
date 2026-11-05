@@ -1,3 +1,4 @@
+
 import { Router, type Response, type NextFunction } from "express";
 import { pool } from "../../config/db.js";
 import {
@@ -16,6 +17,10 @@ const requireBookingStatusPermission = (
 ) => {
   const requestedStatus: unknown = req.body?.status;
 
+  if (requestedStatus === "confirmed") {
+    return requirePermission("bookings.confirm")(req, res, next);
+  }
+
   if (requestedStatus === "cancelled") {
     return requirePermission("bookings.cancel")(req, res, next);
   }
@@ -24,7 +29,6 @@ const requireBookingStatusPermission = (
     return requirePermission("bookings.reject")(req, res, next);
   }
 
-  // Allow the route handler to return its existing validation error.
   return next();
 };
 
@@ -99,8 +103,8 @@ router.get(
 );
 
 // PATCH /api/admin/bookings/:bookingId/status
-// Requires the specific permission for cancellation or rejection.
-// Successful payments are never automatically refunded.
+// Each action requires its corresponding permission.
+// A booking can only be confirmed after successful payment.
 router.patch(
   "/:bookingId/status",
   authenticateAdmin,
@@ -117,10 +121,15 @@ router.patch(
       return;
     }
 
-    if (requestedStatus !== "cancelled" && requestedStatus !== "rejected") {
+    if (
+      requestedStatus !== "confirmed" &&
+      requestedStatus !== "cancelled" &&
+      requestedStatus !== "rejected"
+    ) {
       res.status(400).json({
         success: false,
-        message: 'Status must be either "cancelled" or "rejected".',
+        message:
+          'Status must be "confirmed", "cancelled", or "rejected".',
       });
       return;
     }
@@ -169,7 +178,46 @@ router.patch(
 
       const currentStatus = booking.status;
 
-      if (requestedStatus === "cancelled") {
+      if (requestedStatus === "confirmed") {
+        // Only pending bookings can be confirmed manually.
+        if (currentStatus !== "pending") {
+          await client.query("ROLLBACK");
+          transactionStarted = false;
+
+          res.status(409).json({
+            success: false,
+            message: "Only pending bookings can be confirmed.",
+            currentStatus,
+          });
+          return;
+        }
+
+        // A successful payment must exist before confirmation.
+        const paymentResult = await client.query(
+          `
+            SELECT EXISTS (
+              SELECT 1
+              FROM payments
+              WHERE booking_id = $1
+                AND status = 'succeeded'
+            ) AS has_successful_payment
+          `,
+          [bookingId],
+        );
+
+        if (!paymentResult.rows[0].has_successful_payment) {
+          await client.query("ROLLBACK");
+          transactionStarted = false;
+
+          res.status(409).json({
+            success: false,
+            message:
+              "This booking cannot be confirmed because no successful payment was found.",
+          });
+          return;
+        }
+      } else if (requestedStatus === "cancelled") {
+        // Pending or confirmed bookings can be cancelled.
         if (currentStatus !== "pending" && currentStatus !== "confirmed") {
           await client.query("ROLLBACK");
           transactionStarted = false;
@@ -182,7 +230,7 @@ router.patch(
           return;
         }
       } else {
-        // Rejecting is only allowed for pending bookings.
+        // Rejection is only allowed for pending bookings.
         if (currentStatus !== "pending") {
           await client.query("ROLLBACK");
           transactionStarted = false;
@@ -244,15 +292,19 @@ router.patch(
       // Guest bookings without an account have no user_id.
       // Only registered guests can receive in-app notifications.
       if (updatedBooking.user_id !== null) {
-        const title =
-          requestedStatus === "cancelled"
-            ? "Booking cancelled"
-            : "Booking rejected";
+        let title: string;
+        let message: string;
 
-        const message =
-          requestedStatus === "cancelled"
-            ? `Your booking ${updatedBooking.booking_reference} has been cancelled by the hotel. If you have already paid, your payment has not been automatically refunded.`
-            : `Your booking ${updatedBooking.booking_reference} has been rejected by the hotel. Contact the hotel if you need assistance.`;
+        if (requestedStatus === "confirmed") {
+          title = "Booking confirmed";
+          message = `Your booking ${updatedBooking.booking_reference} has been confirmed by the hotel.`;
+        } else if (requestedStatus === "cancelled") {
+          title = "Booking cancelled";
+          message = `Your booking ${updatedBooking.booking_reference} has been cancelled by the hotel. If you have already paid, your payment has not been automatically refunded.`;
+        } else {
+          title = "Booking rejected";
+          message = `Your booking ${updatedBooking.booking_reference} has been rejected by the hotel. Contact the hotel if you need assistance.`;
+        }
 
         await client.query(
           `
@@ -282,12 +334,20 @@ router.patch(
       await client.query("COMMIT");
       transactionStarted = false;
 
+      let successMessage: string;
+
+      if (requestedStatus === "confirmed") {
+        successMessage = "Booking confirmed successfully.";
+      } else if (requestedStatus === "cancelled") {
+        successMessage =
+          "Booking cancelled successfully. No automatic refund was processed.";
+      } else {
+        successMessage = "Booking rejected successfully.";
+      }
+
       res.status(200).json({
         success: true,
-        message:
-          requestedStatus === "cancelled"
-            ? "Booking cancelled successfully. No automatic refund was processed."
-            : "Booking rejected successfully.",
+        message: successMessage,
         data: updatedBooking,
       });
     } catch (error) {
@@ -315,3 +375,4 @@ router.patch(
 );
 
 export default router;
+  

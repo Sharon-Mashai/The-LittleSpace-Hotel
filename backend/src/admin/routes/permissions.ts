@@ -10,6 +10,11 @@ export const ADMIN_PERMISSIONS = [
     module: "Bookings",
   },
   {
+    key: "bookings.confirm",
+    label: "Confirm Bookings",
+    module: "Bookings",
+  },
+  {
     key: "bookings.cancel",
     label: "Cancel Bookings",
     module: "Bookings",

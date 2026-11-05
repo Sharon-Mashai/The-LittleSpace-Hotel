@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { verifyPaystackPayment, type BookingSummary,} from "../../services/payments";
+import {
+  verifyPaystackPayment,
+  type BookingSummary,
+} from "../../services/payments";
 
 type VerificationResult = {
   bookingId: number;
@@ -67,7 +70,6 @@ function PaymentConfirmationPage() {
 
         if (
           response.success &&
-          response.bookingStatus === "confirmed" &&
           response.paymentStatus === "succeeded" &&
           response.bookingSummary
         ) {
@@ -78,7 +80,10 @@ function PaymentConfirmationPage() {
             bookingSummary: response.bookingSummary,
           });
         } else {
-          setError(response.message || "Your payment could not be confirmed.");
+          setError(
+            response.message ||
+              "Your payment could not be verified. Please contact LittleSpace support if you have been charged.",
+          );
         }
       } catch (verificationError) {
         setError(
@@ -118,7 +123,22 @@ function PaymentConfirmationPage() {
           <>
             <h2>Payment successful!</h2>
 
-            <p>Your payment has been verified and your booking is confirmed.</p>
+            <p>Your payment has been successfully verified by Paystack.</p>
+
+            {result.bookingStatus === "pending" && (
+              <p>
+                Your booking has been received and is awaiting confirmation from
+                the LittleSpace Hotel administration team. Your booking is not
+                yet confirmed.
+              </p>
+            )}
+
+            {result.bookingStatus === "confirmed" && (
+              <p>
+                Your booking has also been confirmed by the LittleSpace Hotel
+                administration team.
+              </p>
+            )}
 
             <div className="booking-confirmation-summary">
               <h2>Booking Summary</h2>
@@ -190,7 +210,7 @@ function PaymentConfirmationPage() {
 
         {!isVerifying && error && (
           <>
-            <h2>Payment confirmation unsuccessful</h2>
+            <h2>Payment verification unsuccessful</h2>
 
             <p>{error}</p>
 
@@ -201,8 +221,8 @@ function PaymentConfirmationPage() {
             )}
 
             <p>
-              Your booking will only be confirmed after the backend successfully
-              verifies your Paystack payment.
+              Your booking will only proceed to hotel confirmation after the
+              backend successfully verifies your Paystack payment.
             </p>
 
             <Link className="primary-button" to="/my-bookings">
@@ -216,4 +236,3 @@ function PaymentConfirmationPage() {
 }
 
 export default PaymentConfirmationPage;
-

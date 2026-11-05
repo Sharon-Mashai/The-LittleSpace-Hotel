@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "../../services/api";
 import { getAuthToken } from "../../services/auth";
-import {
-  getAdminPermissions,
-  type AdminPermission,
-} from "../../services/adminPermissions";
+import {getAdminPermissions, type AdminPermission,} from "../../services/adminPermissions";
 
 type BookingRoom = {
   roomId: number;
@@ -78,6 +75,7 @@ function BookingsPage() {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  const canConfirm = permissions.includes("bookings.confirm");
   const canCancel = permissions.includes("bookings.cancel");
   const canReject = permissions.includes("bookings.reject");
 
@@ -130,15 +128,17 @@ function BookingsPage() {
 
   async function updateBookingStatus(
     booking: AdminBooking,
-    newStatus: "cancelled" | "rejected",
+    newStatus: "confirmed" | "cancelled" | "rejected",
   ) {
-    const action = newStatus === "cancelled" ? "cancel" : "reject";
+    const actionMessages = {
+      confirmed: `confirm booking ${booking.booking_reference}? The booking must already have a successful payment.`,
+      cancelled: `cancel booking ${booking.booking_reference}?`,
+      rejected: `reject booking ${booking.booking_reference}?`,
+    };
 
-    const confirmed = window.confirm(
-      `Are you sure you want to ${action} booking ${booking.booking_reference}?`,
-    );
+    const shouldProceed = window.confirm(actionMessages[newStatus]);
 
-    if (!confirmed) return;
+    if (!shouldProceed) return;
 
     const token = getAuthToken();
 
@@ -321,6 +321,19 @@ function BookingsPage() {
                   <span>Booked on: {formatDate(booking.created_at)}</span>
 
                   <div className="admin-booking-actions">
+                    {canConfirm && isPending && (
+                      <button
+                        type="button"
+                        className="admin-action-button confirm-button"
+                        disabled={isUpdating}
+                        onClick={() =>
+                          updateBookingStatus(booking, "confirmed")
+                        }
+                      >
+                        {isUpdating ? "Updating..." : "Confirm booking"}
+                      </button>
+                    )}
+
                     {canCancel && canBeCancelled && (
                       <button
                         type="button"

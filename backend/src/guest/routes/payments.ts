@@ -206,7 +206,6 @@ router.post("/webhook", async (req, res) => {
       // A repeated successful webhook must not process the payment again.
       if (
         payment.payment_status === "succeeded" &&
-        payment.booking_status === "confirmed" &&
         String(payment.provider_payment_id) === String(transaction.id)
       ) {
         await client.query("COMMIT");
@@ -215,7 +214,7 @@ router.post("/webhook", async (req, res) => {
           success: true,
           message: "Payment was already processed.",
           bookingId: payment.booking_id,
-          bookingStatus: "confirmed",
+          bookingStatus: payment.booking_status,
           paymentStatus: "succeeded",
         });
         return;
@@ -234,6 +233,7 @@ router.post("/webhook", async (req, res) => {
         return;
       }
 
+      // Record successful payment without confirming the booking.
       await client.query(
         `UPDATE payments
          SET status = 'succeeded',
@@ -255,32 +255,14 @@ router.post("/webhook", async (req, res) => {
         ],
       );
 
-      const confirmedBooking = await client.query(
-        `UPDATE bookings
-         SET status = 'confirmed',
-             updated_at = NOW()
-         WHERE id = $1 AND status = 'pending'
-         RETURNING id`,
-        [payment.booking_id],
-      );
-
-      if (confirmedBooking.rows.length !== 1) {
-        await client.query("ROLLBACK");
-
-        res.status(200).json({
-          success: true,
-          message: "Booking status changed; no further action was taken.",
-        });
-        return;
-      }
-
       await client.query("COMMIT");
 
       res.status(200).json({
         success: true,
-        message: "Payment webhook processed successfully.",
+        message:
+          "Payment webhook processed successfully. Booking is awaiting admin confirmation.",
         bookingId: payment.booking_id,
-        bookingStatus: "confirmed",
+        bookingStatus: "pending",
         paymentStatus: "succeeded",
       });
     } catch (error) {
@@ -477,7 +459,7 @@ router.post("/initialize", optionalAuthenticateGuest, async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "An error occurred while initializing the payment.",
+      message: "An error occurred while initializing Paystack payment.",
     });
   }
 });
@@ -562,15 +544,13 @@ router.post("/verify", optionalAuthenticateGuest, async (req, res) => {
       currency: payment.currency,
     };
 
-    if (
-      payment.payment_status === "succeeded" &&
-      payment.booking_status === "confirmed"
-    ) {
+    // Payment may already be successful while the booking awaits admin review.
+    if (payment.payment_status === "succeeded") {
       res.status(200).json({
         success: true,
         message: "Payment has already been verified.",
         bookingId: payment.booking_id,
-        bookingStatus: "confirmed",
+        bookingStatus: payment.booking_status,
         paymentStatus: "succeeded",
         bookingSummary,
       });
@@ -664,17 +644,15 @@ router.post("/verify", optionalAuthenticateGuest, async (req, res) => {
 
       const lockedPayment = lockedResult.rows[0];
 
-      if (
-        lockedPayment.payment_status === "succeeded" &&
-        lockedPayment.booking_status === "confirmed"
-      ) {
+      // Another verification request or webhook may have completed payment.
+      if (lockedPayment.payment_status === "succeeded") {
         await client.query("COMMIT");
 
         res.status(200).json({
           success: true,
           message: "Payment has already been verified.",
           bookingId: lockedPayment.booking_id,
-          bookingStatus: "confirmed",
+          bookingStatus: lockedPayment.booking_status,
           paymentStatus: "succeeded",
           bookingSummary,
         });
@@ -694,6 +672,7 @@ router.post("/verify", optionalAuthenticateGuest, async (req, res) => {
         return;
       }
 
+      // Record successful payment without confirming the booking.
       await client.query(
         `UPDATE payments
            SET status = 'succeeded',
@@ -715,27 +694,14 @@ router.post("/verify", optionalAuthenticateGuest, async (req, res) => {
         ],
       );
 
-      const bookingUpdate = await client.query(
-        `UPDATE bookings
-           SET status = 'confirmed',
-               updated_at = NOW()
-           WHERE id = $1
-             AND status = 'pending'
-           RETURNING id`,
-        [lockedPayment.booking_id],
-      );
-
-      if (bookingUpdate.rows.length !== 1) {
-        throw new Error("The booking could not be confirmed.");
-      }
-
       await client.query("COMMIT");
 
       res.status(200).json({
         success: true,
-        message: "Payment verified and booking confirmed.",
+        message:
+          "Payment verified successfully. Booking is awaiting admin confirmation.",
         bookingId: lockedPayment.booking_id,
-        bookingStatus: "confirmed",
+        bookingStatus: "pending",
         paymentStatus: "succeeded",
         bookingSummary,
       });
