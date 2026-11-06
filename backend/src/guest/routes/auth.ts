@@ -2,10 +2,12 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { randomBytes, createHash } from "node:crypto";
+import { OAuth2Client } from "google-auth-library";
 import { pool } from "../../config/db.js";
 import { sendPasswordResetEmail } from "../../config/emailService.js";
 
 const router = Router();
+const googleClient = new OAuth2Client();
 
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
@@ -181,6 +183,218 @@ router.post("/login", async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Login failed.",
+    });
+  }
+});
+
+// Google sign-in for guest accounts
+router.post("/google", async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (typeof credential !== "string" || !credential.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "A Google ID token is required.",
+      });
+    }
+
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+
+    if (!googleClientId) {
+      console.error("GOOGLE_CLIENT_ID is not configured.");
+
+      return res.status(500).json({
+        success: false,
+        message: "Google sign-in is not configured.",
+      });
+    }
+
+    // Verify the Google ID token and its intended audience.
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: googleClientId,
+    });
+
+    const payload = ticket.getPayload();
+
+    if (
+      !payload ||
+      !payload.sub ||
+      !payload.email ||
+      payload.email_verified !== true
+    ) {
+      return res.status(401).json({
+        success: false,
+        message: "The Google account could not be verified.",
+      });
+    }
+
+    const googleSubject = payload.sub;
+    const normalizedEmail = payload.email.trim().toLowerCase();
+
+    const fullName =
+      typeof payload.name === "string" && payload.name.trim()
+        ? payload.name.trim()
+        : normalizedEmail.split("@")[0];
+
+    // First, look for an account already linked to this Google identity.
+    const linkedUserResult = await pool.query(
+      `SELECT id, full_name, email, role, phone, is_active, created_at
+       FROM users
+       WHERE oauth_provider = 'google'
+         AND oauth_subject = $1
+       LIMIT 1`,
+      [googleSubject],
+    );
+
+    if (linkedUserResult.rows.length > 0) {
+      const user = linkedUserResult.rows[0];
+
+      // Google sign-in is only permitted for guest accounts.
+      if (user.role !== "guest") {
+        return res.status(403).json({
+          success: false,
+          message: "Google sign-in is only available for guest accounts.",
+        });
+      }
+
+      if (!user.is_active) {
+        return res.status(403).json({
+          success: false,
+          message: "This account is inactive.",
+        });
+      }
+
+      const token = jwt.sign(
+        {
+          sub: String(user.id),
+          role: user.role,
+        },
+        getJwtSecret(),
+        { expiresIn: "1h" },
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Google sign-in successful.",
+        token,
+        user: {
+          id: user.id,
+          full_name: user.full_name,
+          email: user.email,
+          role: user.role,
+          phone: user.phone,
+          created_at: user.created_at,
+        },
+      });
+    }
+
+    // Do not automatically link Google to an existing email account.
+    // This protects existing guest and administrator accounts.
+    const existingEmailResult = await pool.query(
+      `SELECT id, role
+       FROM users
+       WHERE LOWER(email) = LOWER($1)
+       LIMIT 1`,
+      [normalizedEmail],
+    );
+
+    if (existingEmailResult.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "An account with this email already exists. Please sign in using your existing login method.",
+      });
+    }
+
+    // Create a new guest account linked to the verified Google identity.
+    // ON CONFLICT handles simultaneous registration attempts safely.
+    const newUserResult = await pool.query(
+      `INSERT INTO users
+         (full_name, email, role, oauth_provider, oauth_subject)
+       VALUES ($1, $2, 'guest', 'google', $3)
+       ON CONFLICT DO NOTHING
+       RETURNING id, full_name, email, role, phone, created_at`,
+      [fullName, normalizedEmail, googleSubject],
+    );
+
+    if (newUserResult.rows.length === 0) {
+      // Another request may have created the same Google identity
+      // between our initial lookup and this insert.
+      const concurrentUserResult = await pool.query(
+        `SELECT id, full_name, email, role, phone, is_active, created_at
+         FROM users
+         WHERE oauth_provider = 'google'
+           AND oauth_subject = $1
+         LIMIT 1`,
+        [googleSubject],
+      );
+
+      if (concurrentUserResult.rows.length === 0) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "An account with this email already exists. Please sign in using your existing login method.",
+        });
+      }
+
+      const user = concurrentUserResult.rows[0];
+
+      if (user.role !== "guest" || !user.is_active) {
+        return res.status(403).json({
+          success: false,
+          message: "This account cannot sign in using Google.",
+        });
+      }
+
+      const token = jwt.sign(
+        {
+          sub: String(user.id),
+          role: user.role,
+        },
+        getJwtSecret(),
+        { expiresIn: "1h" },
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Google sign-in successful.",
+        token,
+        user: {
+          id: user.id,
+          full_name: user.full_name,
+          email: user.email,
+          role: user.role,
+          phone: user.phone,
+          created_at: user.created_at,
+        },
+      });
+    }
+
+    const user = newUserResult.rows[0];
+
+    const token = jwt.sign(
+      {
+        sub: String(user.id),
+        role: user.role,
+      },
+      getJwtSecret(),
+      { expiresIn: "1h" },
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Guest account created successfully using Google.",
+      token,
+      user,
+    });
+  } catch (error) {
+    console.error("Google sign-in failed:", error);
+
+    return res.status(401).json({
+      success: false,
+      message: "Google sign-in failed. Please try again.",
     });
   }
 });
