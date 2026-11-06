@@ -146,21 +146,29 @@ function SignInPage() {
           </button>
         </form>
 
-        <p>Or continue with</p>
+        <div className="auth-google-section">
+          <div className="auth-google-divider">
+            <span>OR</span>
+          </div>
 
-        <div>
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={handleGoogleError}
-            theme="outline"
-            size="large"
-            shape="rectangular"
-            text="signin_with"
-            width="320"
-          />
+          <div className="auth-google-button">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              theme="outline"
+              size="large"
+              shape="rectangular"
+              text="signin_with"
+              width="320"
+            />
+          </div>
+
+          {googleLoading && (
+            <p className="auth-google-status" role="status">
+              Signing in with Google...
+            </p>
+          )}
         </div>
-
-        {googleLoading && <p role="status">Signing in with Google...</p>}
 
         <p className="auth-switch">
           Don't have an account? <Link to="/register">Create an account</Link>
