@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { getMyBookings, requestGuestBookingOtp, verifyGuestBookingOtp, type CustomerBooking,} from "../../services/bookings";
+import {
+  getMyBookings,
+  requestGuestBookingOtp,
+  verifyGuestBookingOtp,
+  type CustomerBooking,
+} from "../../services/bookings";
 import { getAuthToken } from "../../services/auth";
 import capeTownImage from "../../assets/search-results/cape-town.png";
 import tzaneenImage from "../../assets/search-results/tzaneen.png";
@@ -177,7 +182,6 @@ function MyBookingsPage() {
   return (
     <main className="account-page my-bookings-page">
       <section className="account-page-heading">
-        <p className="eyebrow">YOUR LITTLESPACE ACCOUNT</p>
         <h1>My Bookings</h1>
         <p>View and manage your hotel reservations.</p>
       </section>
@@ -197,10 +201,7 @@ function MyBookingsPage() {
             send you a six-digit verification code.
           </p>
 
-          <form
-            className="my-bookings-access-form"
-            onSubmit={handleRequestOtp}
-          >
+          <form className="my-bookings-access-form" onSubmit={handleRequestOtp}>
             <label htmlFor="guest-booking-email">Email address</label>
             <input
               id="guest-booking-email"
