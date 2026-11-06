@@ -108,6 +108,136 @@ router.get(
   },
 );
 
+// POST /api/bookings/:bookingId/cancel
+// Allow a signed-in customer to cancel their own pending or confirmed booking.
+router.post(
+  "/:bookingId/cancel",
+  optionalAuthenticateGuest,
+  async (req: AuthenticatedGuestRequest, res) => {
+    const bookingId = String(req.params.bookingId);
+
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: "Please sign in to cancel your booking.",
+      });
+      return;
+    }
+
+    if (!/^[1-9]\d*$/.test(bookingId)) {
+      res.status(400).json({
+        success: false,
+        message: "A valid booking ID is required.",
+      });
+      return;
+    }
+
+    const client = await pool.connect();
+    let transactionStarted = false;
+
+    try {
+      await client.query("BEGIN");
+      transactionStarted = true;
+
+      // Lock the booking and verify that it belongs to this customer.
+      const bookingResult = await client.query(
+        `
+          SELECT
+            id,
+            booking_reference,
+            user_id,
+            status
+          FROM bookings
+          WHERE id = $1
+            AND user_id = $2
+          FOR UPDATE
+        `,
+        [bookingId, req.user.id],
+      );
+
+      if (bookingResult.rows.length === 0) {
+        await client.query("ROLLBACK");
+        transactionStarted = false;
+
+        res.status(404).json({
+          success: false,
+          message:
+            "Booking not found or you do not have permission to cancel it.",
+        });
+        return;
+      }
+
+      const booking = bookingResult.rows[0] as {
+        id: string;
+        booking_reference: string;
+        user_id: string;
+        status: string;
+      };
+
+      // Only pending and confirmed bookings can be cancelled.
+      if (booking.status !== "pending" && booking.status !== "confirmed") {
+        await client.query("ROLLBACK");
+        transactionStarted = false;
+
+        res.status(409).json({
+          success: false,
+          message: "Only pending or confirmed bookings can be cancelled.",
+          currentStatus: booking.status,
+        });
+        return;
+      }
+
+      // Update the booking only. Payment records remain unchanged.
+      const updateResult = await client.query(
+        `
+          UPDATE bookings
+          SET
+            status = 'cancelled',
+            updated_at = NOW()
+          WHERE id = $1
+            AND user_id = $2
+          RETURNING
+            id,
+            booking_reference,
+            status,
+            updated_at
+        `,
+        [bookingId, req.user.id],
+      );
+
+      await client.query("COMMIT");
+      transactionStarted = false;
+
+      res.status(200).json({
+        success: true,
+        message:
+          "Your booking has been cancelled successfully. No automatic refund was processed.",
+        data: updateResult.rows[0],
+      });
+    } catch (error) {
+      if (transactionStarted) {
+        try {
+          await client.query("ROLLBACK");
+        } catch (rollbackError) {
+          console.error(
+            "Failed to roll back customer booking cancellation:",
+            rollbackError,
+          );
+        }
+      }
+
+      console.error("Failed to cancel customer booking:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Unable to cancel your booking.",
+      });
+    } finally {
+      client.release();
+    }
+  },
+);
+
 // POST /api/bookings
 // Create a booking for a signed-in customer or guest.
 router.post(
