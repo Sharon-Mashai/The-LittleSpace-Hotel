@@ -2453,6 +2453,45 @@ img {
   color: #276b32;
 }
 
+.booking-cancel-button {
+  justify-self: end;
+  grid-column: 1 / -1;
+  padding: 10px 20px;
+  border: 1px solid #c45b54;
+  border-radius: 6px;
+  background: #fff5f4;
+  color: #a3332b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease,
+    border-color 0.2s ease, transform 0.2s ease;
+}
+
+.booking-cancel-button:hover {
+  background: #a3332b;
+  border-color: #a3332b;
+  color: #ffffff;
+}
+
+.booking-cancel-button:focus-visible {
+  outline: 2px solid #a3332b;
+  outline-offset: 3px;
+}
+
+.booking-cancel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .booking-cancel-button {
+    width: 100%;
+    justify-self: stretch;
+  }
+}
+
+
 @media (max-width: 950px) {
   .booking-card {
     grid-template-columns: 1fr 1fr;
