@@ -50,6 +50,18 @@ export async function loginUser(
   return saveAuthentication(response);
 }
 
+// Login a guest using their Google ID token.
+export async function loginWithGoogle(
+  credential: string,
+): Promise<AuthenticatedUser> {
+  const response = await apiRequest<AuthResponse>("/auth/google", {
+    method: "POST",
+    body: { credential },
+  });
+
+  return saveAuthentication(response);
+}
+
 // Register a new guest account.
 export async function registerGuest(
   fullName: string,
