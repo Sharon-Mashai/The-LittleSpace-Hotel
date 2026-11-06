@@ -476,10 +476,10 @@ img {
 ========================================= */
 
 .search-page {
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 50px 18% 80px;
+  width: calc(100% - 32px);
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 50px 0 80px;
 }
 
 .search-heading {
@@ -738,7 +738,7 @@ img {
 .rating-badge {
   position: absolute;
   top: 12px;
-  right: 12px;
+  left: 12px;
   padding: 7px 9px;
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.95);
@@ -776,6 +776,47 @@ img {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.7;
+}
+
+.result-review {
+  width: 100%;
+  margin: 0 0 16px;
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--page-bg);
+}
+
+.result-review-rating {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 6px;
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.result-review-rating span {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.result-review-comment {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0 0 6px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.result-review cite {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
 }
 
 .result-card-footer {
@@ -1325,9 +1366,6 @@ img {
   .home-stay-card > img {
     height: 200px;
   }
-  .search-page {
-    padding: 50px 8% 70px;
-  }
 }
 
 @media (max-width: 900px) {
@@ -1415,10 +1453,6 @@ img {
     font-size: 21px;
   }
 
-  .search-page {
-    padding: 40px 5% 60px;
-  }
-
   .search-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 26px;
@@ -1438,11 +1472,6 @@ img {
 
   .site-footer {
     padding: 25px 5%;
-  }
-
-  .account-page {
-    min-height: 65vh;
-    padding: 50px 5%;
   }
 
   .auth-card {
@@ -1547,10 +1576,6 @@ img {
 
   .site-footer {
     padding: 30px 5%;
-  }
-
-  .account-page {
-    padding: 38px 5%;
   }
 
   .auth-card {
@@ -2305,22 +2330,23 @@ img {
    MY BOOKINGS PAGE
 ======================================== */
 
-.account-page:has(.customer-bookings) {
-  width: 100%;
-  max-width: 1500px;
+.account-page.my-bookings-page {
+  width: calc(100% - 32px);
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 65px 4%;
+  padding: 65px 0;
   gap: 30px;
 }
 
-.account-page:has(.customer-bookings) .account-page-heading {
+.my-bookings-page .account-page-heading {
   width: 100%;
+  max-width: none;
   text-align: center;
   padding-bottom: 30px;
   border-bottom: 1px solid var(--border);
 }
 
-.account-page:has(.customer-bookings) .account-page-heading h1 {
+.my-bookings-page .account-page-heading h1 {
   font-family: Georgia, serif;
   font-size: clamp(42px, 5vw, 64px);
   margin: 12px 0;
@@ -2437,8 +2463,9 @@ img {
 }
 
 @media (max-width: 600px) {
-  .account-page:has(.customer-bookings) {
-    padding: 40px 5%;
+  .account-page.my-bookings-page {
+    padding-top: 40px;
+    padding-bottom: 40px;
   }
 
   .booking-card {

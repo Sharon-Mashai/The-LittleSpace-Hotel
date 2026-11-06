@@ -175,7 +175,7 @@ function MyBookingsPage() {
   }
 
   return (
-    <main className="account-page">
+    <main className="account-page my-bookings-page">
       <section className="account-page-heading">
         <p className="eyebrow">YOUR LITTLESPACE ACCOUNT</p>
         <h1>My Bookings</h1>

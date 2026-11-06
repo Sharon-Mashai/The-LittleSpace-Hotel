@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { HomeSearchCriteria } from "./HomePage";
 import { getHotelBranches, type HotelBranch } from "../../services/branches";
@@ -21,7 +21,6 @@ type Stay = {
   id: string;
   location: string;
   price: number;
-  rating: number;
   image: string;
   imageAlt: string;
   facilities: string[];
@@ -32,7 +31,6 @@ const stays: Stay[] = [
     id: "cape-town",
     location: "Cape Town",
     price: 1850,
-    rating: 4.8,
     image: capeTownImage,
     imageAlt: "Hotel accommodation in Cape Town",
     facilities: ["Wi-Fi", "Parking", "Breakfast"],
@@ -41,7 +39,6 @@ const stays: Stay[] = [
     id: "tzaneen",
     location: "Tzaneen",
     price: 2100,
-    rating: 4.8,
     image: tzaneenImage,
     imageAlt: "Hotel accommodation in Tzaneen",
     facilities: ["Wi-Fi", "Swimming pool", "Breakfast"],
@@ -50,7 +47,6 @@ const stays: Stay[] = [
     id: "johannesburg",
     location: "Johannesburg",
     price: 1450,
-    rating: 4.8,
     image: johannesburgImage,
     imageAlt: "Hotel accommodation in Johannesburg",
     facilities: ["Wi-Fi", "Swimming pool", "Parking"],
@@ -59,7 +55,6 @@ const stays: Stay[] = [
     id: "pretoria",
     location: "Pretoria",
     price: 1650,
-    rating: 4.8,
     image: pretoriaImage,
     imageAlt: "Hotel accommodation in Pretoria",
     facilities: ["Wi-Fi", "Swimming pool", "Parking", "Breakfast"],
@@ -68,7 +63,6 @@ const stays: Stay[] = [
     id: "durban",
     location: "Durban",
     price: 2350,
-    rating: 4.8,
     image: durbanImage,
     imageAlt: "Hotel accommodation in Durban",
     facilities: ["Wi-Fi", "Swimming pool", "Breakfast"],
@@ -77,7 +71,6 @@ const stays: Stay[] = [
     id: "polokwane",
     location: "Polokwane",
     price: 1250,
-    rating: 4.8,
     image: polokwaneImage,
     imageAlt: "Hotel accommodation in Polokwane",
     facilities: ["Wi-Fi", "Parking"],
@@ -119,6 +112,16 @@ function HotelsPage({
     null,
   );
   const [favouriteError, setFavouriteError] = useState("");
+
+  const getMatchingBranch = useCallback(
+    (stay: Stay) =>
+      branches.find(
+        (branch) =>
+          branch.city.trim().toLowerCase() ===
+          stay.location.trim().toLowerCase(),
+      ),
+    [branches],
+  );
 
   useEffect(() => {
     async function loadBranches() {
@@ -175,7 +178,12 @@ function HotelsPage({
         .includes(normalizedSearch);
 
       const withinPrice = stay.price <= maximumPrice;
-      const meetsRating = !excellentOnly || stay.rating >= 4;
+      const branch = getMatchingBranch(stay);
+      const meetsRating =
+        !excellentOnly ||
+        (branch !== undefined &&
+          branch.review_count > 0 &&
+          Number(branch.average_rating) >= 4);
 
       const hasFacilities = selectedFacilities.every((facility) =>
         stay.facilities.includes(facility),
@@ -183,14 +191,13 @@ function HotelsPage({
 
       return matchesLocation && withinPrice && meetsRating && hasFacilities;
     });
-  }, [searchTerm, maximumPrice, excellentOnly, selectedFacilities]);
-
-  function getMatchingBranch(stay: Stay): HotelBranch | undefined {
-    return branches.find(
-      (branch) =>
-        branch.city.trim().toLowerCase() === stay.location.trim().toLowerCase(),
-    );
-  }
+  }, [
+    searchTerm,
+    maximumPrice,
+    excellentOnly,
+    selectedFacilities,
+    getMatchingBranch,
+  ]);
 
   async function handleToggleFavourite(branch: HotelBranch) {
     if (!getAuthToken()) {
@@ -403,6 +410,11 @@ function HotelsPage({
             <div className="results-grid">
               {filteredStays.map((stay) => {
                 const matchingBranch = getMatchingBranch(stay);
+                const displayedRating = matchingBranch
+                  ? matchingBranch.review_count > 0
+                    ? matchingBranch.average_rating
+                    : matchingBranch.star_rating
+                  : null;
                 const isFavourite = matchingBranch
                   ? favouriteBranchIds.includes(matchingBranch.id)
                   : false;
@@ -412,9 +424,14 @@ function HotelsPage({
                     <div className="result-image-wrap">
                       <img src={stay.image} alt={stay.imageAlt} />
 
-                      <span className="rating-badge">
-                        ★ {stay.rating.toFixed(1)}
-                      </span>
+                      {displayedRating !== null && (
+                        <span className="rating-badge">
+                          ★ {displayedRating.toFixed(1)}
+                          {matchingBranch && matchingBranch.review_count > 0
+                            ? ` (${matchingBranch.review_count})`
+                            : ""}
+                        </span>
+                      )}
 
                       {matchingBranch && (
                         <button
@@ -456,6 +473,36 @@ function HotelsPage({
                           {matchingBranch.name}
                         </p>
                       )}
+
+                      {matchingBranch &&
+                        matchingBranch.latest_review_rating !== null && (
+                          <blockquote className="result-review">
+                            <p className="result-review-rating">
+                              {"★".repeat(
+                                matchingBranch.latest_review_rating,
+                              )}
+                              {"☆".repeat(
+                                5 - matchingBranch.latest_review_rating,
+                              )}
+                              <span>
+                                {matchingBranch.latest_review_rating}/5
+                              </span>
+                            </p>
+                            {matchingBranch.latest_review_comment && (
+                              <p
+                                className="result-review-comment"
+                                title={matchingBranch.latest_review_comment}
+                              >
+                                “{matchingBranch.latest_review_comment}”
+                              </p>
+                            )}
+                            {matchingBranch.latest_review_author && (
+                              <cite>
+                                — {matchingBranch.latest_review_author}
+                              </cite>
+                            )}
+                          </blockquote>
+                        )}
 
                       <div className="result-card-footer">
                         <p className="stay-price">
@@ -499,5 +546,3 @@ function HotelsPage({
 }
 
 export default HotelsPage;
-
-
