@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
-import {
-  getMyBookings,
-  requestGuestBookingOtp,
-  verifyGuestBookingOtp,
-  type CustomerBooking,
-} from "../../services/bookings";
+import { getMyBookings, requestGuestBookingOtp, verifyGuestBookingOtp, type CustomerBooking,} from "../../services/bookings";
 import { getAuthToken } from "../../services/auth";
-
 import capeTownImage from "../../assets/search-results/cape-town.png";
 import tzaneenImage from "../../assets/search-results/tzaneen.png";
 import johannesburgImage from "../../assets/search-results/johannesburg.png";
@@ -196,14 +190,17 @@ function MyBookingsPage() {
       )}
 
       {!isLoading && !getAuthToken() && verificationStep === "email" && (
-        <section className="empty-state">
+        <section className="empty-state my-bookings-access">
           <h2>Access your guest bookings</h2>
           <p>
             Enter the email address you used when making your reservation. We'll
             send you a six-digit verification code.
           </p>
 
-          <form onSubmit={handleRequestOtp}>
+          <form
+            className="my-bookings-access-form"
+            onSubmit={handleRequestOtp}
+          >
             <label htmlFor="guest-booking-email">Email address</label>
             <input
               id="guest-booking-email"
@@ -382,5 +379,3 @@ function MyBookingsPage() {
 }
 
 export default MyBookingsPage;
-
-
