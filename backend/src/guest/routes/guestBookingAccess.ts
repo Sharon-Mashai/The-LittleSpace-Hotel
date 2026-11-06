@@ -1,3 +1,4 @@
+
 import { Router, type Request, type Response } from "express";
 import {
   randomInt,
@@ -410,10 +411,10 @@ router.get("/bookings", async (req: Request, res: Response): Promise<void> => {
 
     const sessionResult = await pool.query(
       `SELECT email
-         FROM guest_booking_access_sessions
-         WHERE token_hash = $1
-           AND expires_at > NOW()
-         LIMIT 1`,
+       FROM guest_booking_access_sessions
+       WHERE token_hash = $1
+         AND expires_at > NOW()
+       LIMIT 1`,
       [tokenHash],
     );
 
@@ -430,41 +431,41 @@ router.get("/bookings", async (req: Request, res: Response): Promise<void> => {
 
     const result = await pool.query(
       `
-          SELECT
-            b.id,
-            b.booking_reference,
-            b.check_in::text AS check_in,
-            b.check_out::text AS check_out,
-            (b.check_out - b.check_in)::integer AS nights,
-            b.adults,
-            b.children,
-            b.status AS booking_status,
-            b.total_amount,
-            b.currency,
-            b.created_at,
-            b.guest_full_name,
-            b.guest_email,
-            b.guest_phone,
-            hb.name AS branch_name,
-            rt.name AS room_type_name,
-            br.nightly_price,
-            COALESCE(p.status, 'not_started') AS payment_status
-          FROM bookings b
-          INNER JOIN booking_rooms br ON br.booking_id = b.id
-          INNER JOIN rooms r ON r.id = br.room_id
-          INNER JOIN room_types rt ON rt.id = r.room_type_id
-          INNER JOIN hotel_branches hb ON hb.id = rt.branch_id
-          LEFT JOIN LATERAL (
-            SELECT status
-            FROM payments
-            WHERE booking_id = b.id
-            ORDER BY created_at DESC, id DESC
-            LIMIT 1
-          ) p ON TRUE
-          WHERE b.user_id IS NULL
-            AND LOWER(b.guest_email) = $1
-          ORDER BY b.created_at DESC
-        `,
+        SELECT
+          b.id,
+          b.booking_reference,
+          b.check_in::text AS check_in,
+          b.check_out::text AS check_out,
+          (b.check_out - b.check_in)::integer AS nights,
+          b.adults,
+          b.children,
+          b.status AS booking_status,
+          b.total_amount,
+          b.currency,
+          b.created_at,
+          b.guest_full_name,
+          b.guest_email,
+          b.guest_phone,
+          hb.name AS branch_name,
+          rt.name AS room_type_name,
+          br.nightly_price,
+          COALESCE(p.status, 'not_started') AS payment_status
+        FROM bookings b
+        INNER JOIN booking_rooms br ON br.booking_id = b.id
+        INNER JOIN rooms r ON r.id = br.room_id
+        INNER JOIN room_types rt ON rt.id = r.room_type_id
+        INNER JOIN hotel_branches hb ON hb.id = rt.branch_id
+        LEFT JOIN LATERAL (
+          SELECT status
+          FROM payments
+          WHERE booking_id = b.id
+          ORDER BY created_at DESC, id DESC
+          LIMIT 1
+        ) p ON TRUE
+        WHERE b.user_id IS NULL
+          AND LOWER(b.guest_email) = $1
+        ORDER BY b.created_at DESC
+      `,
       [verifiedEmail],
     );
 
@@ -483,4 +484,133 @@ router.get("/bookings", async (req: Request, res: Response): Promise<void> => {
   }
 });
 
+// Cancel a guest booking using the verified email session.
+router.post(
+  "/bookings/:bookingId/cancel",
+  async (req: Request, res: Response): Promise<void> => {
+    const authorization = req.headers.authorization ?? "";
+    const tokenMatch = authorization.match(/^Bearer ([a-f0-9]{64})$/i);
+
+    if (!tokenMatch) {
+      res.status(401).json({
+        success: false,
+        message: "Please verify your email to cancel your booking.",
+      });
+      return;
+    }
+
+    const bookingId =
+      typeof req.params.bookingId === "string" ? req.params.bookingId : "";
+
+    if (!/^[1-9]\d*$/.test(bookingId)) {
+      res.status(400).json({
+        success: false,
+        message: "Please provide a valid booking ID.",
+      });
+      return;
+    }
+
+    const accessToken = tokenMatch[1];
+    const tokenHash = createHash("sha256")
+      .update(accessToken)
+      .digest("hex");
+
+    const client = await pool.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      // Confirm that the OTP access session is valid.
+      const sessionResult = await client.query(
+        `SELECT email
+         FROM guest_booking_access_sessions
+         WHERE token_hash = $1
+           AND expires_at > NOW()
+         LIMIT 1`,
+        [tokenHash],
+      );
+
+      if (sessionResult.rows.length === 0) {
+        await client.query("ROLLBACK");
+
+        res.status(401).json({
+          success: false,
+          message:
+            "Your booking access session is invalid or has expired. Please verify your email again.",
+        });
+        return;
+      }
+
+      const verifiedEmail = sessionResult.rows[0].email;
+
+      // Lock the booking and confirm that it belongs to this guest.
+      const bookingResult = await client.query(
+        `SELECT id, booking_reference, status
+         FROM bookings
+         WHERE id = $1
+           AND user_id IS NULL
+           AND LOWER(guest_email) = $2
+         FOR UPDATE`,
+        [bookingId, verifiedEmail],
+      );
+
+      if (bookingResult.rows.length === 0) {
+        await client.query("ROLLBACK");
+
+        res.status(404).json({
+          success: false,
+          message: "Booking not found.",
+        });
+        return;
+      }
+
+      const booking = bookingResult.rows[0];
+
+      if (!["pending", "confirmed"].includes(booking.status)) {
+        await client.query("ROLLBACK");
+
+        res.status(409).json({
+          success: false,
+          message: `This booking cannot be cancelled because its current status is ${booking.status}.`,
+        });
+        return;
+      }
+
+      // Only change the booking status. Do not modify payment records.
+      const updateResult = await client.query(
+        `UPDATE bookings
+         SET status = 'cancelled',
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING id, booking_reference, status, updated_at`,
+        [bookingId],
+      );
+
+      await client.query("COMMIT");
+
+      res.status(200).json({
+        success: true,
+        message:
+          "Your booking has been cancelled successfully. No refund has been processed.",
+        data: updateResult.rows[0],
+      });
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+
+      console.error(
+        "Guest booking cancellation failed:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
+
+      res.status(500).json({
+        success: false,
+        message: "Unable to cancel your booking. Please try again later.",
+      });
+    } finally {
+      client.release();
+    }
+  },
+);
+
 export default router;
+  
