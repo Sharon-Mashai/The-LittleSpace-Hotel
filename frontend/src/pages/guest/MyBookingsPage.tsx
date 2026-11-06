@@ -249,9 +249,6 @@ function MyBookingsPage() {
     setSuccessMessage("");
   }
 
-  const isPaidBooking =
-    selectedBooking?.payment_status.toLowerCase() === "succeeded";
-
   return (
     <main className="account-page my-bookings-page">
       <section className="account-page-heading">
@@ -443,6 +440,7 @@ function MyBookingsPage() {
                   booking.booking_status === "confirmed") && (
                   <button
                     type="button"
+                    className="booking-cancel-button"
                     onClick={() => handleOpenCancellationModal(booking)}
                   >
                     Cancel booking
@@ -462,11 +460,7 @@ function MyBookingsPage() {
       {selectedBooking && (
         <ConfirmationModal
           title="Cancel this booking?"
-          message={
-            isPaidBooking
-              ? `Are you sure you want to cancel booking ${selectedBooking.booking_reference}? Your payment has already been received. Cancelling this booking will not refund your payment. Refunds are not currently supported.`
-              : `Are you sure you want to cancel booking ${selectedBooking.booking_reference}? This action cannot be undone.`
-          }
+          message={`Are you sure you want to cancel booking ${selectedBooking.booking_reference}? This action cannot be undone.`}
           confirmText="Cancel booking"
           icon="!"
           variant="danger"
