@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
-import {
-  getMyBookings,
-  requestGuestBookingOtp,
-  verifyGuestBookingOtp,
-  type CustomerBooking,
-} from "../../services/bookings";
+import { getMyBookings,requestGuestBookingOtp, verifyGuestBookingOtp, cancelMyBooking, type CustomerBooking,} from "../../services/bookings";
 import { getAuthToken } from "../../services/auth";
+import ConfirmationModal from "../../components/ConfirmationModal";
+import Toast from "../../components/Toast";
 import capeTownImage from "../../assets/search-results/cape-town.png";
 import tzaneenImage from "../../assets/search-results/tzaneen.png";
 import johannesburgImage from "../../assets/search-results/johannesburg.png";
@@ -68,6 +65,13 @@ function MyBookingsPage() {
   >("email");
 
   const [message, setMessage] = useState("");
+
+  // Booking cancellation state.
+  const [selectedBooking, setSelectedBooking] =
+    useState<CustomerBooking | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancellationError, setCancellationError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Load bookings automatically for signed-in customers.
   // OTP-verified guests can also return using their saved session token.
@@ -178,6 +182,75 @@ function MyBookingsPage() {
     setMessage("");
     setVerificationStep("email");
   }
+
+  // Open the cancellation confirmation modal.
+  function handleOpenCancellationModal(booking: CustomerBooking) {
+    setSelectedBooking(booking);
+    setCancellationError("");
+  }
+
+  // Close the cancellation confirmation modal.
+  function handleCloseCancellationModal() {
+    if (isCancelling) return;
+
+    setSelectedBooking(null);
+    setCancellationError("");
+  }
+
+  // Cancel the selected booking.
+  async function handleConfirmCancellation() {
+    if (!selectedBooking || isCancelling) return;
+
+    try {
+      setIsCancelling(true);
+      setCancellationError("");
+
+      const guestAccessToken = sessionStorage.getItem(GUEST_ACCESS_TOKEN_KEY);
+
+      await cancelMyBooking(selectedBooking.id, guestAccessToken ?? undefined);
+
+      // Update the booking status immediately in the current list.
+      setBookings((currentBookings) =>
+        currentBookings.map((booking) =>
+          booking.id === selectedBooking.id
+            ? { ...booking, booking_status: "cancelled" }
+            : booking,
+        ),
+      );
+
+      setSelectedBooking(null);
+      setSuccessMessage(
+        `Booking ${selectedBooking.booking_reference} was cancelled successfully.`,
+      );
+
+      // Refresh the list to retrieve the latest booking information.
+      try {
+        const updatedBookings = await getMyBookings(
+          guestAccessToken ?? undefined,
+        );
+
+        setBookings(updatedBookings);
+      } catch {
+        // The cancellation has already succeeded.
+        // Keep the locally updated booking status if refreshing fails.
+      }
+    } catch (cancellationError) {
+      setCancellationError(
+        cancellationError instanceof Error
+          ? cancellationError.message
+          : "Unable to cancel this booking. Please try again.",
+      );
+    } finally {
+      setIsCancelling(false);
+    }
+  }
+
+  function dismissSuccessToast() {
+    setSuccessMessage("");
+  }
+
+  const isPaidBooking =
+    selectedBooking?.payment_status.toLowerCase() === "succeeded";
 
   return (
     <main className="account-page my-bookings-page">
@@ -365,6 +438,16 @@ function MyBookingsPage() {
                     <strong>{formatStatus(booking.payment_status)}</strong>
                   </p>
                 </div>
+
+                {(booking.booking_status === "pending" ||
+                  booking.booking_status === "confirmed") && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCancellationModal(booking)}
+                  >
+                    Cancel booking
+                  </button>
+                )}
               </article>
             ))}
 
@@ -375,6 +458,29 @@ function MyBookingsPage() {
             )}
           </section>
         )}
+
+      {selectedBooking && (
+        <ConfirmationModal
+          title="Cancel this booking?"
+          message={
+            isPaidBooking
+              ? `Are you sure you want to cancel booking ${selectedBooking.booking_reference}? Your payment has already been received. Cancelling this booking will not refund your payment. Refunds are not currently supported.`
+              : `Are you sure you want to cancel booking ${selectedBooking.booking_reference}? This action cannot be undone.`
+          }
+          confirmText="Cancel booking"
+          icon="!"
+          variant="danger"
+          isBusy={isCancelling}
+          error={cancellationError}
+          busyText="Cancelling..."
+          onCancel={handleCloseCancellationModal}
+          onConfirm={() => void handleConfirmCancellation()}
+        />
+      )}
+
+      {successMessage && (
+        <Toast message={successMessage} onDismiss={dismissSuccessToast} />
+      )}
     </main>
   );
 }
