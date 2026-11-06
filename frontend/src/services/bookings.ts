@@ -76,6 +76,17 @@ type VerifyGuestOtpResponse = {
   expiresIn: number;
 };
 
+export type CancelBookingResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    id: number;
+    booking_reference: string;
+    status: string;
+    updated_at: string;
+  };
+};
+
 export async function createBooking(
   details: CreateBookingDetails,
 ): Promise<CreatedBooking> {
@@ -132,4 +143,27 @@ export async function getMyBookings(
   });
 
   return response.data;
+}
+
+// Cancel a booking for either a signed-in customer or an OTP-verified guest.
+export async function cancelMyBooking(
+  bookingId: number,
+  guestAccessToken?: string,
+): Promise<CancelBookingResponse> {
+  const customerToken = getAuthToken();
+
+  const endpoint = customerToken
+    ? `/bookings/${bookingId}/cancel`
+    : `/guest-booking-access/bookings/${bookingId}/cancel`;
+
+  const token = customerToken ?? guestAccessToken;
+
+  if (!token) {
+    throw new Error("Please verify your email to cancel your booking.");
+  }
+
+  return apiRequest<CancelBookingResponse>(endpoint, {
+    method: "POST",
+    token,
+  });
 }
