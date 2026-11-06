@@ -623,7 +623,7 @@ router.get("/", authenticateAdmin, requireSuperAdmin, async (req, res) => {
 
 // POST /api/admin/administrators
 router.post("/", authenticateAdmin, requireSuperAdmin, async (req, res) => {
-  const { fullName, email, password, phone, permissions = [] } = req.body ?? {};
+ const { fullName, email, password, phone } = req.body ?? {};
 
   if (
     typeof fullName !== "string" ||
@@ -657,14 +657,9 @@ router.post("/", authenticateAdmin, requireSuperAdmin, async (req, res) => {
     });
   }
 
-  const validatedPermissions = validatePermissions(permissions);
-
-  if (validatedPermissions === null) {
-    return res.status(400).json({
-      success: false,
-      message: "Permissions must be an array of valid permission keys.",
-    });
-  }
+const validatedPermissions: AdminPermission[] = ADMIN_PERMISSIONS.map(
+  (permission) => permission.key,
+);
 
   const normalizedEmail = email.trim().toLowerCase();
   const normalizedPhone = typeof phone === "string" ? phone.trim() : null;
