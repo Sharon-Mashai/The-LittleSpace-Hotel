@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
+
 import { useAppDispatch } from "../../app/hooks";
 import { setAuthenticatedUser } from "../../features/auth/authSlice";
-import { loginUser } from "../../services/auth";
+import { loginUser, loginWithGoogle } from "../../services/auth";
 import PasswordInput from "../../components/PasswordInput";
 
 function SignInPage() {
@@ -13,6 +15,7 @@ function SignInPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -54,6 +57,47 @@ function SignInPage() {
     }
   }
 
+  async function handleGoogleSuccess(credentialResponse: CredentialResponse) {
+    setError("");
+
+    if (!credentialResponse.credential) {
+      setError("Google did not return an ID token. Please try again.");
+      return;
+    }
+
+    setGoogleLoading(true);
+
+    try {
+      // Send the Google ID token to the LittleSpace backend.
+      const user = await loginWithGoogle(credentialResponse.credential);
+
+      // Google sign-in is only available for guest accounts.
+      if (user.role !== "guest") {
+        setError("Google sign-in is only available for guest accounts.");
+        return;
+      }
+
+      // Save the user in the shared Redux authentication state.
+      dispatch(setAuthenticatedUser(user));
+
+      // Redirect the guest to the homepage.
+      navigate("/");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to sign in with Google. Please try again.",
+      );
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
+
+  function handleGoogleError() {
+    setError("Google sign-in was unsuccessful. Please try again.");
+    setGoogleLoading(false);
+  }
+
   return (
     <main className="account-page auth-screen">
       <section className="auth-card">
@@ -93,10 +137,30 @@ function SignInPage() {
             </p>
           )}
 
-          <button className="primary-button" type="submit" disabled={loading}>
+          <button
+            className="primary-button"
+            type="submit"
+            disabled={loading || googleLoading}
+          >
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
+
+        <p>Or continue with</p>
+
+        <div>
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            theme="outline"
+            size="large"
+            shape="rectangular"
+            text="signin_with"
+            width="320"
+          />
+        </div>
+
+        {googleLoading && <p role="status">Signing in with Google...</p>}
 
         <p className="auth-switch">
           Don't have an account? <Link to="/register">Create an account</Link>
