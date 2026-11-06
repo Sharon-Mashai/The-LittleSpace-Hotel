@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import { getLoggedInUser } from "../../services/auth";
+import { useAppSelector } from "../../app/hooks";
 
 function AdminDashboardPage() {
-  const user = getLoggedInUser();
+  const user = useAppSelector((state) => state.auth.user);
 
   const dashboardSections = [
     {

@@ -99,7 +99,7 @@ function SignInPage() {
         </form>
 
         <p className="auth-switch">
-          Don't have an account? <Link to="/register">Create anaccount</Link>
+          Don't have an account? <Link to="/register">Create an account</Link>
         </p>
 
         <p className="auth-guest">
