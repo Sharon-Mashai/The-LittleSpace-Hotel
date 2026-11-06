@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getGuestFavourites, removeGuestFavourite, type GuestFavourite,} from "../../services/favourites";
+import {
+  getGuestFavourites,
+  removeGuestFavourite,
+  type GuestFavourite,
+} from "../../services/favourites";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import Toast from "../../components/Toast";
 
@@ -15,6 +19,7 @@ function FavouritesPage() {
     null,
   );
   const [successMessage, setSuccessMessage] = useState("");
+
   const dismissSuccessToast = useCallback(() => setSuccessMessage(""), []);
 
   useEffect(() => {
@@ -51,6 +56,7 @@ function FavouritesPage() {
       setFavourites((current) =>
         current.filter((favourite) => favourite.branch_id !== branchId),
       );
+
       setPendingRemoval(null);
       setSuccessMessage("Favourite removed.");
     } catch (err) {
@@ -67,7 +73,6 @@ function FavouritesPage() {
   return (
     <main className="account-page">
       <section className="account-page-heading">
-        <p className="eyebrow">YOUR ACCOUNT</p>
         <h1>My Favourites</h1>
         <p>Keep track of the LittleSpace stays you love.</p>
       </section>
@@ -99,14 +104,21 @@ function FavouritesPage() {
             <article className="favourite-card" key={favourite.branch_id}>
               <div>
                 <p className="eyebrow">LITTLESPACE HOTEL</p>
+
                 <h2>{favourite.name}</h2>
+
                 <p>
                   {favourite.city}
                   {favourite.province ? `, ${favourite.province}` : ""}
                 </p>
+
                 {favourite.address_line && <p>{favourite.address_line}</p>}
+
                 {favourite.star_rating !== null && (
-                  <p>Hotel rating: {favourite.star_rating} / 5</p>
+                  <p>
+                    Hotel rating: {Number(favourite.star_rating).toFixed(1)} /
+                    5.0
+                  </p>
                 )}
               </div>
 
@@ -134,6 +146,7 @@ function FavouritesPage() {
           ))}
         </section>
       )}
+
       {pendingRemoval && (
         <ConfirmationModal
           title="Remove this favourite?"
@@ -151,10 +164,8 @@ function FavouritesPage() {
           onConfirm={() => void handleRemoveFavourite(pendingRemoval.branch_id)}
         />
       )}
-      <Toast
-        message={successMessage}
-        onDismiss={dismissSuccessToast}
-      />
+
+      <Toast message={successMessage} onDismiss={dismissSuccessToast} />
     </main>
   );
 }
