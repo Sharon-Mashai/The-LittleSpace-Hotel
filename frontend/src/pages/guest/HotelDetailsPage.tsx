@@ -519,35 +519,57 @@ function HotelDetailsPage() {
         </p>
       </section>
 
+      {/* Branch image on the left and branch information on the right. */}
       <section className="empty-state">
         <h2>About this branch</h2>
 
-        {branch.description && <p>{branch.description}</p>}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "20px",
+            flexWrap: "wrap",
+          }}
+        >
+          <img
+            src={getBranchImage(branch.name)}
+            alt={`${branch.name} hotel`}
+            style={{
+              width: "220px",
+              maxWidth: "100%",
+              height: "140px",
+              objectFit: "cover",
+              borderRadius: "10px",
+              display: "block",
+              flexShrink: 0,
+            }}
+          />
 
-        <p>
-          {branch.address_line}
-          {branch.suburb ? `, ${branch.suburb}` : ""}
-          {branch.city ? `, ${branch.city}` : ""}
-          {branch.province ? `, ${branch.province}` : ""}
-        </p>
+          <div
+            style={{
+              flex: "1",
+              minWidth: "220px",
+            }}
+          >
+            {branch.description && <p>{branch.description}</p>}
 
-        {branch.star_rating !== null && (
-          <p>Star rating: {branch.star_rating} stars</p>
-        )}
+            <p>
+              {branch.address_line}
+              {branch.address_line && branch.city ? ", " : ""}
+              {branch.city}
+              {branch.province ? `, ${branch.province}` : ""}
+            </p>
 
-        <p>
-          Guest rating: {branch.average_rating} / 5 ({branch.review_count}{" "}
-          reviews)
-        </p>
-      </section>
+            {branch.star_rating !== null && (
+              <p>Star rating: {branch.star_rating} stars</p>
+            )}
 
-      {/* Display the image belonging to the selected hotel branch. */}
-      <section className="hotel-image-section">
-        <img
-          className="hotel-branch-image"
-          src={getBranchImage(branch.name)}
-          alt={`${branch.name} hotel`}
-        />
+            <p>
+              Guest rating: {averageRating.toFixed(1)} / 5 ({reviewCount}{" "}
+              reviews)
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* Branch location map */}
