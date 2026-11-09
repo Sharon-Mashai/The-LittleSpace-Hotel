@@ -18,7 +18,7 @@ import polokwaneImage from "../../assets/search-results/polokwane.png";
 type HotelsPageProps = {
   initialLocation?: string;
   initialSearchCriteria?: HomeSearchCriteria;
-  onViewStay?: (stayId: string) => void;
+  onViewStay?: (stayId: string, searchCriteria?: HomeSearchCriteria) => void;
 };
 
 type Stay = {
@@ -457,9 +457,7 @@ function HotelsPage({
                         >
                           {favouriteActionId === matchingBranch.id
                             ? "..."
-                            : isFavourite
-                              ? "♡"
-                              : "♡"}
+                            : "♡"}
                         </button>
                       )}
                     </div>
@@ -516,7 +514,10 @@ function HotelsPage({
                           className="card-book-button"
                           type="button"
                           onClick={() =>
-                            onViewStay?.(matchingBranch?.slug ?? stay.id)
+                            onViewStay?.(
+                              matchingBranch?.slug ?? stay.id,
+                              initialSearchCriteria,
+                            )
                           }
                         >
                           View stay
