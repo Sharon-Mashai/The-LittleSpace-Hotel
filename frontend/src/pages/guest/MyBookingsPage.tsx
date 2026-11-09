@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { getMyBookings,requestGuestBookingOtp, verifyGuestBookingOtp, cancelMyBooking, type CustomerBooking,} from "../../services/bookings";
+import {
+  getMyBookings,
+  requestGuestBookingOtp,
+  verifyGuestBookingOtp,
+  cancelMyBooking,
+  type CustomerBooking,
+} from "../../services/bookings";
 import { getAuthToken } from "../../services/auth";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import Toast from "../../components/Toast";
@@ -273,6 +279,7 @@ function MyBookingsPage() {
 
           <form className="my-bookings-access-form" onSubmit={handleRequestOtp}>
             <label htmlFor="guest-booking-email">Email address</label>
+
             <input
               id="guest-booking-email"
               type="email"
@@ -293,15 +300,25 @@ function MyBookingsPage() {
       )}
 
       {!isLoading && !getAuthToken() && verificationStep === "otp" && (
-        <section className="empty-state">
+        <section className="empty-state guest-booking-verification">
+          <div className="guest-verification-icon">
+            <span aria-hidden="true">✉</span>
+          </div>
+
+          <span className="guest-verification-eyebrow">
+            GUEST BOOKING ACCESS
+          </span>
+
           <h2>Verify your email address</h2>
-          <p>
+
+          <p className="guest-verification-description">
             Enter the six-digit code we sent to <strong>{email}</strong>. The
             code expires after five minutes.
           </p>
 
-          <form onSubmit={handleVerifyOtp}>
+          <form className="guest-verification-form" onSubmit={handleVerifyOtp}>
             <label htmlFor="guest-booking-otp">Verification code</label>
+
             <input
               id="guest-booking-otp"
               type="text"
@@ -319,15 +336,33 @@ function MyBookingsPage() {
 
             <button type="submit" disabled={isVerifyingOtp}>
               {isVerifyingOtp ? "Verifying..." : "Verify and view bookings"}
+              {!isVerifyingOtp && <span aria-hidden="true">→</span>}
             </button>
           </form>
 
-          {message && <p role="status">{message}</p>}
-          {error && <p role="alert">{error}</p>}
+          {message && (
+            <p className="guest-verification-message" role="status">
+              {message}
+            </p>
+          )}
 
-          <button type="button" onClick={handleChangeEmail}>
+          {error && (
+            <p className="guest-verification-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <button
+            className="guest-verification-change-email"
+            type="button"
+            onClick={handleChangeEmail}
+          >
             Use a different email address
           </button>
+
+          <p className="guest-verification-security">
+            Your verification code helps protect access to your reservations.
+          </p>
         </section>
       )}
 
