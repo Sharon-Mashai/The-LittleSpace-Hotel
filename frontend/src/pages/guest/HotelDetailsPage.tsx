@@ -21,6 +21,27 @@ import { getAuthToken } from "../../services/auth";
 import BranchMap from "../../components/BranchMap";
 import Toast from "../../components/Toast";
 
+import capeTownImage from "../../assets/search-results/cape-town.png";
+import durbanImage from "../../assets/search-results/durban.png";
+import johannesburgImage from "../../assets/search-results/johannesburg.png";
+import polokwaneImage from "../../assets/search-results/polokwane.png";
+import pretoriaImage from "../../assets/search-results/pretoria.png";
+import tzaneenImage from "../../assets/search-results/tzaneen.png";
+
+// Return the correct image for each LittleSpace hotel branch.
+function getBranchImage(branchName: string): string {
+  const branch = branchName.toLowerCase();
+
+  if (branch.includes("cape town")) return capeTownImage;
+  if (branch.includes("tzaneen")) return tzaneenImage;
+  if (branch.includes("johannesburg")) return johannesburgImage;
+  if (branch.includes("pretoria")) return pretoriaImage;
+  if (branch.includes("durban")) return durbanImage;
+  if (branch.includes("polokwane")) return polokwaneImage;
+
+  return capeTownImage;
+}
+
 // Return today's date in YYYY-MM-DD format using the guest's local date.
 function getTodayDateString() {
   const today = new Date();
@@ -78,10 +99,8 @@ function HotelDetailsPage() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewSubmitError, setReviewSubmitError] = useState("");
   const [reviewSubmitSuccess, setReviewSubmitSuccess] = useState("");
-  const dismissReviewToast = useCallback(
-    () => setReviewSubmitSuccess(""),
-    [],
-  );
+
+  const dismissReviewToast = useCallback(() => setReviewSubmitSuccess(""), []);
 
   // Today's date is used as the earliest allowed check-in date.
   const minimumBookingDate = getTodayDateString();
@@ -522,6 +541,15 @@ function HotelDetailsPage() {
         </p>
       </section>
 
+      {/* Display the image belonging to the selected hotel branch. */}
+      <section className="hotel-image-section">
+        <img
+          className="hotel-branch-image"
+          src={getBranchImage(branch.name)}
+          alt={`${branch.name} hotel`}
+        />
+      </section>
+
       {/* Branch location map */}
       <BranchMap
         branchName={branch.name}
@@ -934,10 +962,7 @@ function HotelDetailsPage() {
         </section>
       )}
 
-      <Toast
-        message={reviewSubmitSuccess}
-        onDismiss={dismissReviewToast}
-      />
+      <Toast message={reviewSubmitSuccess} onDismiss={dismissReviewToast} />
 
       <p>
         <Link to="/hotels">Back to hotels</Link>
