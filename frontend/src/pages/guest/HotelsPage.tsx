@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { HomeSearchCriteria } from "./HomePage";
 import { getHotelBranches, type HotelBranch } from "../../services/branches";
-import { getGuestFavourites, addGuestFavourite, removeGuestFavourite,} from "../../services/favourites";
+import {
+  getGuestFavourites,
+  addGuestFavourite,
+  removeGuestFavourite,
+} from "../../services/favourites";
 import { getAuthToken } from "../../services/auth";
 import capeTownImage from "../../assets/search-results/cape-town.png";
 import tzaneenImage from "../../assets/search-results/tzaneen.png";
@@ -470,7 +474,7 @@ function HotelsPage({
 
                       {matchingBranch && (
                         <p className="facility-summary">
-                          {matchingBranch.name}
+                          The {matchingBranch.name}
                         </p>
                       )}
 
@@ -478,9 +482,7 @@ function HotelsPage({
                         matchingBranch.latest_review_rating !== null && (
                           <blockquote className="result-review">
                             <p className="result-review-rating">
-                              {"★".repeat(
-                                matchingBranch.latest_review_rating,
-                              )}
+                              {"★".repeat(matchingBranch.latest_review_rating)}
                               {"☆".repeat(
                                 5 - matchingBranch.latest_review_rating,
                               )}
