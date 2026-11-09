@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 import { pool } from "../../config/db.js";
 import { authenticateAdmin, requirePermission } from "../middleware/auth.js";
@@ -5,7 +6,8 @@ import { authenticateAdmin, requirePermission } from "../middleware/auth.js";
 const router = Router();
 
 // GET /api/admin/dashboard
-// Return reservation, revenue, branch, room-type and recent-booking statistics.
+// Return system-wide booking, guest, administrator, revenue,
+// branch, room-type and recent-booking statistics.
 router.get(
   "/",
   authenticateAdmin,
@@ -17,6 +19,8 @@ router.get(
         revenueResult,
         branchesResult,
         roomTypesResult,
+        guestsResult,
+        administratorsResult,
         recentBookingsResult,
       ] = await Promise.all([
         pool.query(`
@@ -55,6 +59,22 @@ router.get(
 
         pool.query(`
           SELECT
+            COUNT(*) AS total_guests,
+            COUNT(*) FILTER (WHERE is_active = TRUE) AS active_guests
+          FROM users
+          WHERE role = 'guest'
+        `),
+
+        pool.query(`
+          SELECT
+            COUNT(*) AS total_administrators,
+            COUNT(*) FILTER (WHERE is_active = TRUE) AS active_administrators
+          FROM users
+          WHERE role = 'admin'
+        `),
+
+        pool.query(`
+          SELECT
             b.id,
             b.booking_reference,
             b.guest_full_name,
@@ -78,6 +98,8 @@ router.get(
           revenue: revenueResult.rows[0],
           branches: branchesResult.rows[0],
           roomTypes: roomTypesResult.rows[0],
+          guests: guestsResult.rows[0],
+          administrators: administratorsResult.rows[0],
           recentBookings: recentBookingsResult.rows,
         },
       });
