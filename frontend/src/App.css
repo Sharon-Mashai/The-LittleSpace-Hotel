@@ -2223,17 +2223,21 @@ img {
 }
 
 .room-type-images {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  display: flex;
   gap: 8px;
   width: 100%;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 4px;
 }
 
 .room-type-images img {
-  width: 100%;
-  aspect-ratio: 4 / 3;
+  flex: 0 0 120px;
+  width: 120px;
+  height: 90px;
   border-radius: 6px;
   object-fit: cover;
+  scroll-snap-align: start;
 }
 
 /* Availability and booking forms */

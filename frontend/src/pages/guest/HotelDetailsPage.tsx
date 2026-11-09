@@ -33,6 +33,10 @@ import johannesburgImage from "../../assets/search-results/johannesburg.png";
 import polokwaneImage from "../../assets/search-results/polokwane.png";
 import pretoriaImage from "../../assets/search-results/pretoria.png";
 import tzaneenImage from "../../assets/search-results/tzaneen.png";
+import deluxeRoomImage from "../../assets/rooms/Deluxe.jpeg";
+import deluxeRoomImage2 from "../../assets/rooms/Deluxe-1.jpeg";
+import standardRoomImage from "../../assets/rooms/Standard.jpeg";
+import standardRoomImage2 from "../../assets/rooms/Standard-1.jpeg";
 
 // Return the correct image for each LittleSpace hotel branch.
 function getBranchImage(branchName: string): string {
@@ -46,6 +50,94 @@ function getBranchImage(branchName: string): string {
   if (branch.includes("polokwane")) return polokwaneImage;
 
   return capeTownImage;
+}
+
+function getRoomTypeImages(roomName: string): string[] {
+  const name = roomName.toLowerCase();
+
+  if (name.includes("standard")) {
+    return [standardRoomImage, standardRoomImage2];
+  }
+
+  if (name.includes("deluxe")) {
+    return [deluxeRoomImage, deluxeRoomImage2];
+  }
+
+  return [];
+}
+
+function formatPrice(price: number | string, currency: string) {
+  return new Intl.NumberFormat("en-ZA", {
+    style: "currency",
+    currency,
+  }).format(Number(price));
+}
+
+type RoomTypeCardProps = {
+  room: RoomType;
+  availableRooms?: number;
+  onSelect?: () => void;
+  isSelected?: boolean;
+};
+
+function RoomTypeCard({
+  room,
+  availableRooms,
+  onSelect,
+  isSelected = false,
+}: RoomTypeCardProps) {
+  const images = getRoomTypeImages(room.name);
+
+  return (
+    <article
+      className={`favourite-card${onSelect ? " availability-room-card" : ""}`}
+    >
+      {images.length > 0 && (
+        <div
+          className="room-type-images"
+          role="group"
+          aria-label={`${room.name} photos`}
+        >
+          {images.map((image, index) => (
+            <img
+              key={image}
+              src={image}
+              alt={`${room.name} photo ${index + 1}`}
+              loading="lazy"
+            />
+          ))}
+        </div>
+      )}
+      <div>
+        <h3>{room.name}</h3>
+        {room.description && <p>{room.description}</p>}
+
+        <p>
+          Adults: {room.capacity_adults} | Children: {room.capacity_children}
+        </p>
+
+        <p>From {formatPrice(room.base_price, room.currency)} per night</p>
+
+        {room.facilities && room.facilities.length > 0 && (
+          <p>Facilities: {room.facilities.join(", ")}</p>
+        )}
+
+        {availableRooms !== undefined && (
+          <p>Available rooms: {availableRooms}</p>
+        )}
+      </div>
+
+      {onSelect && (
+        <button
+          className="primary-button"
+          type="button"
+          onClick={onSelect}
+        >
+          {isSelected ? "Room selected" : "Select this room"}
+        </button>
+      )}
+    </article>
+  );
 }
 
 // Return today's date in YYYY-MM-DD format using the guest's local date.
@@ -337,13 +429,6 @@ function HotelDetailsPage() {
   function handleAvailabilitySearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void searchAvailability();
-  }
-
-  function formatPrice(price: number | string, currency: string) {
-    return new Intl.NumberFormat("en-ZA", {
-      style: "currency",
-      currency,
-    }).format(Number(price));
   }
 
   function formatReviewDate(date: string) {
@@ -726,13 +811,13 @@ function HotelDetailsPage() {
       {/* Review submission form */}
       <section className="empty-state review-form-section">
         <h2>Write a review</h2>
-        <p>
+        <p className="review-description">
           Reviews are available to signed-in guests who have completed a stay at
           this branch.
         </p>
 
         {!getAuthToken() ? (
-          <p>
+          <p className="review-description">
             Please <Link to="/sign-in">sign in</Link> to leave a review.
           </p>
         ) : loadingBookingHistory ? (
@@ -819,25 +904,7 @@ function HotelDetailsPage() {
       ) : (
         <section className="favourites-list">
           {roomTypes.map((room) => (
-            <article className="favourite-card" key={room.id}>
-              <div>
-                <h3>{room.name}</h3>
-                {room.description && <p>{room.description}</p>}
-
-                <p>
-                  Adults: {room.capacity_adults} | Children:{" "}
-                  {room.capacity_children}
-                </p>
-
-                <p>
-                  From {formatPrice(room.base_price, room.currency)} per night
-                </p>
-
-                {room.facilities && room.facilities.length > 0 && (
-                  <p>Facilities: {room.facilities.join(", ")}</p>
-                )}
-              </div>
-            </article>
+            <RoomTypeCard key={room.id} room={room} />
           ))}
         </section>
       )}
@@ -923,25 +990,16 @@ function HotelDetailsPage() {
           ) : (
             <div className="favourites-list">
               {availableRooms.map((room) => (
-                <article className="favourite-card" key={room.id}>
-                  <h3>{room.name}</h3>
-                  {room.description && <p>{room.description}</p>}
-                  <p>{formatPrice(room.base_price, room.currency)} per night</p>
-                  <p>Available rooms: {room.available_rooms}</p>
-
-                  <button
-                    className="primary-button"
-                    type="button"
-                    onClick={() => {
-                      setSelectedRoom(room);
-                      setBookingError("");
-                    }}
-                  >
-                    {selectedRoom?.id === room.id
-                      ? "Room selected"
-                      : "Select this room"}
-                  </button>
-                </article>
+                <RoomTypeCard
+                  key={room.id}
+                  room={room}
+                  availableRooms={room.available_rooms}
+                  isSelected={selectedRoom?.id === room.id}
+                  onSelect={() => {
+                    setSelectedRoom(room);
+                    setBookingError("");
+                  }}
+                />
               ))}
             </div>
           )}
