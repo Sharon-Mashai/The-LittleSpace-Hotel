@@ -7042,3 +7042,76 @@ img {
   outline: 3px solid rgba(165, 139, 107, 0.25);
   outline-offset: 3px;
 }
+
+/* Compact room availability cards */
+.availability-results .favourite-card {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.availability-results .favourite-card h3 {
+  margin: 0;
+}
+
+.availability-results .favourite-card p {
+  margin: 0;
+}
+
+.availability-results .favourite-card .primary-button {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+/* Force compact spacing in availability results */
+.account-page .availability-results .favourite-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start !important;
+  gap: 6px !important;
+}
+
+.account-page .availability-results .favourite-card h3,
+.account-page .availability-results .favourite-card p {
+  margin: 0 !important;
+}
+
+.account-page .availability-results .favourite-card .primary-button {
+  align-self: flex-start;
+  margin-top: 4px !important;
+}
+
+/* Compact check room availability section */
+.availability-heading {
+  margin-bottom: 12px;
+  padding-bottom: 0;
+}
+
+.availability-heading h2 {
+  margin-bottom: 5px;
+}
+
+.availability-heading p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.availability-form {
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.availability-form form {
+  gap: 12px;
+}
+
+.availability-form form > div {
+  gap: 5px;
+}
+
+.availability-form form label {
+  margin-bottom: 3px;
+}
+
+.availability-form form .primary-button {
+  margin-top: 4px;
+}

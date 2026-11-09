@@ -842,12 +842,12 @@ function HotelDetailsPage() {
         </section>
       )}
 
-      <section className="account-page-heading">
+      <section className="availability-heading">
         <h2>Check room availability</h2>
         <p>Select your dates and guests to see which rooms are available.</p>
       </section>
 
-      <section className="empty-state">
+      <section className="empty-state availability-form">
         <form onSubmit={handleAvailabilitySearch}>
           <div>
             <label htmlFor="checkIn">Check-in date</label>
@@ -910,7 +910,7 @@ function HotelDetailsPage() {
       </section>
 
       {availableRooms !== null && (
-        <section>
+        <section className="availability-results">
           <h2>Availability results</h2>
 
           {availableRooms.length === 0 ? (
