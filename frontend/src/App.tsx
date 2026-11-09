@@ -39,11 +39,29 @@ function HotelsRoute() {
   const initialLocation = routeState?.location ?? "";
   const initialSearchCriteria = routeState?.searchCriteria;
 
+  function handleViewStay(stayId: string, searchCriteria?: HomeSearchCriteria) {
+    if (!searchCriteria) {
+      navigate(`/hotels/${stayId}`);
+      return;
+    }
+
+    const params = new URLSearchParams();
+
+    params.set("destination", searchCriteria.destination);
+    params.set("checkIn", searchCriteria.checkIn);
+    params.set("checkOut", searchCriteria.checkOut);
+    params.set("adults", String(searchCriteria.adults));
+    params.set("children", String(searchCriteria.children));
+    params.set("rooms", String(searchCriteria.rooms));
+
+    navigate(`/hotels/${stayId}?${params.toString()}`);
+  }
+
   return (
     <HotelsPage
       initialLocation={initialLocation}
       initialSearchCriteria={initialSearchCriteria}
-      onViewStay={(stayId) => navigate(`/hotels/${stayId}`)}
+      onViewStay={handleViewStay}
     />
   );
 }
