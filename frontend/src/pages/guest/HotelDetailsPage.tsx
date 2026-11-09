@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { getHotelBranches, type HotelBranch } from "../../services/branches";
 import { getBranchRoomTypes, type RoomType } from "../../services/roomTypes";
 import {
@@ -54,6 +60,27 @@ function getTodayDateString() {
 
 function HotelDetailsPage() {
   const { hotelId } = useParams<{ hotelId: string }>();
+  const [searchParams] = useSearchParams();
+
+  // Restore the search criteria passed from the Home page.
+  const initialCheckIn = searchParams.get("checkIn") ?? "";
+  const initialCheckOut = searchParams.get("checkOut") ?? "";
+
+  const requestedAdults = Number(searchParams.get("adults"));
+  const requestedChildren = Number(searchParams.get("children"));
+
+  const initialAdults =
+    Number.isInteger(requestedAdults) && requestedAdults >= 1
+      ? requestedAdults
+      : 1;
+
+  const initialChildren =
+    Number.isInteger(requestedChildren) && requestedChildren >= 0
+      ? requestedChildren
+      : 0;
+
+  // Track whether the automatic availability check has already started.
+  const autoCheckAttempted = useRef(false);
 
   const [branch, setBranch] = useState<HotelBranch | null>(null);
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
@@ -61,10 +88,10 @@ function HotelDetailsPage() {
     AvailableRoomType[] | null
   >(null);
 
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
-  const [adults, setAdults] = useState(1);
-  const [children, setChildren] = useState(0);
+  const [checkIn, setCheckIn] = useState(initialCheckIn);
+  const [checkOut, setCheckOut] = useState(initialCheckOut);
+  const [adults, setAdults] = useState(initialAdults);
+  const [children, setChildren] = useState(initialChildren);
 
   const [selectedRoom, setSelectedRoom] = useState<AvailableRoomType | null>(
     null,
@@ -143,6 +170,74 @@ function HotelDetailsPage() {
       loadBranchDetails();
     }
   }, [hotelId]);
+
+  // Check availability using the current search criteria.
+  const searchAvailability = useCallback(async () => {
+    if (!branch) return;
+
+    if (!checkIn || !checkOut) {
+      setAvailabilityError("Please select both check-in and check-out dates.");
+      return;
+    }
+
+    if (checkIn < getTodayDateString()) {
+      setAvailabilityError("Check-in date cannot be in the past.");
+      return;
+    }
+
+    if (checkOut < getTodayDateString()) {
+      setAvailabilityError("Check-out date cannot be in the past.");
+      return;
+    }
+
+    if (checkOut <= checkIn) {
+      setAvailabilityError("Check-out must be after check-in.");
+      return;
+    }
+
+    try {
+      setCheckingAvailability(true);
+      setAvailabilityError("");
+      setAvailableRooms(null);
+      setSelectedRoom(null);
+      setBookingError("");
+
+      const results = await checkRoomAvailability({
+        branchId: branch.id,
+        checkIn,
+        checkOut,
+        adults,
+        children,
+      });
+
+      setAvailableRooms(results);
+    } catch (err) {
+      setAvailabilityError(
+        err instanceof Error
+          ? err.message
+          : "Unable to check room availability.",
+      );
+    } finally {
+      setCheckingAvailability(false);
+    }
+  }, [branch, checkIn, checkOut, adults, children]);
+
+  // Automatically check availability after the selected branch has loaded.
+  useEffect(() => {
+    if (
+      !branch ||
+      !initialCheckIn ||
+      !initialCheckOut ||
+      autoCheckAttempted.current
+    ) {
+      return;
+    }
+
+    // Prevent duplicate automatic searches without triggering another render.
+    autoCheckAttempted.current = true;
+
+    void searchAvailability();
+  }, [branch, initialCheckIn, initialCheckOut, searchAvailability]);
 
   // Load public reviews whenever the selected branch changes.
   useEffect(() => {
@@ -238,57 +333,10 @@ function HotelDetailsPage() {
     setBookingError("");
   }
 
-  async function handleAvailabilitySearch(event: FormEvent<HTMLFormElement>) {
+  // Handle a manual availability search from the form.
+  function handleAvailabilitySearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (!branch) return;
-
-    if (!checkIn || !checkOut) {
-      setAvailabilityError("Please select both check-in and check-out dates.");
-      return;
-    }
-
-    // Prevent guests from searching for a stay that starts in the past.
-    if (checkIn < getTodayDateString()) {
-      setAvailabilityError("Check-in date cannot be in the past.");
-      return;
-    }
-
-    if (checkOut < getTodayDateString()) {
-      setAvailabilityError("Check-out date cannot be in the past.");
-      return;
-    }
-
-    if (checkOut <= checkIn) {
-      setAvailabilityError("Check-out must be after check-in.");
-      return;
-    }
-
-    try {
-      setCheckingAvailability(true);
-      setAvailabilityError("");
-      setAvailableRooms(null);
-      setSelectedRoom(null);
-      setBookingError("");
-
-      const results = await checkRoomAvailability({
-        branchId: branch.id,
-        checkIn,
-        checkOut,
-        adults,
-        children,
-      });
-
-      setAvailableRooms(results);
-    } catch (err) {
-      setAvailabilityError(
-        err instanceof Error
-          ? err.message
-          : "Unable to check room availability.",
-      );
-    } finally {
-      setCheckingAvailability(false);
-    }
+    void searchAvailability();
   }
 
   function formatPrice(price: number | string, currency: string) {
