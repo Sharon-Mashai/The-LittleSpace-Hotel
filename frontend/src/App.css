@@ -1812,9 +1812,10 @@ img {
   align-items: stretch;
   justify-content: flex-start;
   gap: 30px;
-  max-width: 1440px;
+  width: calc(100% - 32px);
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 65px 8%;
+  padding: 65px 0;
 }
 
 /* Branch introduction */
@@ -1866,6 +1867,41 @@ img {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.8;
+}
+
+/* Branch location map */
+.branch-map-section {
+  width: 100%;
+  padding: 28px 38px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-bg);
+  box-shadow: 0 5px 20px rgba(40, 30, 20, 0.035);
+}
+
+.branch-map-section h2 {
+  margin: 0 0 9px;
+  font-family: var(--serif);
+  font-size: 27px;
+  font-weight: 400;
+}
+
+.branch-map-section > p:not(.branch-map-attribution) {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.branch-map-section a {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.branch-map-section a:hover {
+  color: var(--accent-dark);
 }
 
 /* Section headings */
@@ -2243,7 +2279,7 @@ img {
 
 @media (max-width: 850px) {
   .account-page:has(.hotel-reviews-section) {
-    padding: 50px 5%;
+    padding: 50px 0;
   }
 
   .hotel-reviews-layout {
@@ -2274,16 +2310,20 @@ img {
 @media (max-width: 600px) {
   .account-page:has(.hotel-reviews-section) {
     gap: 22px;
-    padding: 35px 5%;
+    padding: 35px 0;
   }
 
   .account-page:has(.hotel-reviews-section) > .account-page-heading h1 {
-    font-size: 37px;
+    font-size: clamp(32px, 8vw, 37px);
   }
 
   .account-page:has(.hotel-reviews-section)
     > .empty-state:not(.review-form-section) {
     padding: 25px 22px;
+  }
+
+  .branch-map-section h2 {
+    font-size: 24px;
   }
 
   .hotel-reviews-section > .account-page-heading h2,
@@ -5972,7 +6012,7 @@ img {
    MY FAVOURITES PAGE
 ========================================= */
 
-.account-page:has(> .favourites-list) {
+.account-page:has(> .favourites-list):not(:has(.hotel-reviews-section)) {
   width: 100%;
   max-width: 1500px;
   margin: 0 auto;
@@ -5980,7 +6020,8 @@ img {
   gap: 24px;
 }
 
-.account-page:has(> .favourites-list) .account-page-heading {
+.account-page:has(> .favourites-list):not(:has(.hotel-reviews-section))
+  .account-page-heading {
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
@@ -6077,7 +6118,7 @@ img {
 /* Responsive layout */
 
 @media (max-width: 768px) {
-  .account-page:has(> .favourites-list) {
+  .account-page:has(> .favourites-list):not(:has(.hotel-reviews-section)) {
     padding: 40px 5%;
   }
 
