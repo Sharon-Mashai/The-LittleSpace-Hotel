@@ -136,8 +136,8 @@ router.patch(
     const client = await pool.connect();
     let transactionStarted = false;
 
-    // These details are collected during confirmation,
-    // but the email is only sent after the transaction commits.
+    // Details required for the confirmation email.
+    // The email is sent asynchronously after the transaction commits.
     let confirmationEmailDetails: {
       guestName: string;
       guestEmail: string;
@@ -397,36 +397,34 @@ router.patch(
         );
       }
 
-      // Commit the booking update before attempting to send an email.
+      // Commit the booking update before sending any email.
       await client.query("COMMIT");
       transactionStarted = false;
 
       let successMessage: string;
-      let emailSent: boolean | undefined;
 
       if (requestedStatus === "confirmed") {
         successMessage = "Booking confirmed successfully.";
-        emailSent = false;
 
         if (confirmationEmailDetails && confirmationEmailDetails.guestEmail) {
-          try {
-            await sendBookingConfirmationEmail(confirmationEmailDetails);
+          // Send the email without making the admin wait for SMTP.
+          const emailDetails = confirmationEmailDetails;
 
-            emailSent = true;
+          void sendBookingConfirmationEmail(emailDetails)
+            .then(() => {
+              console.log(
+                `Booking confirmation email sent to ${emailDetails.guestEmail}.`,
+              );
+            })
+            .catch((emailError) => {
+              console.error(
+                "Booking was confirmed, but the confirmation email could not be sent:",
+                emailError,
+              );
+            });
 
-            console.log(
-              `Booking confirmation email sent to ${confirmationEmailDetails.guestEmail}.`,
-            );
-          } catch (emailError) {
-            // Email failure must not undo a successful booking confirmation.
-            console.error(
-              "Booking was confirmed, but the confirmation email could not be sent:",
-              emailError,
-            );
-
-            successMessage =
-              "Booking confirmed successfully, but the confirmation email could not be sent.";
-          }
+          successMessage =
+            "Booking confirmed successfully. The confirmation email is being sent.";
         } else {
           successMessage =
             "Booking confirmed successfully, but guest email details could not be retrieved.";
@@ -438,11 +436,11 @@ router.patch(
         successMessage = "Booking rejected successfully.";
       }
 
+      // Return the response without waiting for email delivery.
       res.status(200).json({
         success: true,
         message: successMessage,
         data: updatedBooking,
-        ...(requestedStatus === "confirmed" ? { emailSent } : {}),
       });
     } catch (error) {
       if (transactionStarted) {
