@@ -102,134 +102,219 @@ function PaymentConfirmationPage() {
   const booking = result?.bookingSummary;
 
   return (
-    <main className="account-page">
-      <section className="empty-state confirmation-state">
-        <p className="eyebrow">LITTLESPACE HOTEL</p>
+    <main className="payment-confirmation-page">
+      <section className="payment-confirmation-card">
+        <div className="payment-confirmation-brand">
+          <span>LITTLESPACE HOTEL</span>
+          <span className="payment-confirmation-brand-line" />
+        </div>
 
-        <h1>Payment Confirmation</h1>
+        <div className="payment-confirmation-content">
+          {isVerifying && (
+            <div className="payment-verification-state">
+              <div className="payment-loading-indicator" />
 
-        {isVerifying && (
-          <>
-            <h2>Verifying your payment...</h2>
+              <span className="payment-confirmation-eyebrow">
+                PAYMENT PROCESSING
+              </span>
 
-            <p>
-              Please wait while we confirm your payment with Paystack. Do not
-              close this page.
-            </p>
-          </>
-        )}
-
-        {!isVerifying && result && booking && (
-          <>
-            <h2>Payment successful!</h2>
-
-            <p>Your payment has been successfully verified by Paystack.</p>
-
-            {result.bookingStatus === "pending" && (
-              <p>
-                Your booking has been received and is awaiting confirmation from
-                the LittleSpace Hotel administration team. Your booking is not
-                yet confirmed.
-              </p>
-            )}
-
-            {result.bookingStatus === "confirmed" && (
-              <p>
-                Your booking has also been confirmed by the LittleSpace Hotel
-                administration team.
-              </p>
-            )}
-
-            <div className="booking-confirmation-summary">
-              <h2>Booking Summary</h2>
+              <h1>Verifying your payment</h1>
 
               <p>
-                Booking reference: <strong>{booking.bookingReference}</strong>
-              </p>
-
-              <p>
-                Booking ID: <strong>{result.bookingId}</strong>
-              </p>
-
-              <p>
-                Branch: <strong>{booking.branchName}</strong>
-              </p>
-
-              <p>
-                Room type: <strong>{booking.roomTypeName}</strong>
-              </p>
-
-              <p>
-                Check-in: <strong>{formatDate(booking.checkIn)}</strong>
-              </p>
-
-              <p>
-                Check-out: <strong>{formatDate(booking.checkOut)}</strong>
-              </p>
-
-              <p>
-                Number of nights: <strong>{booking.nights}</strong>
-              </p>
-
-              <p>
-                Nightly price:{" "}
-                <strong>
-                  {formatCurrency(booking.nightlyPrice, booking.currency)}
-                </strong>
-              </p>
-
-              <p>
-                Total amount:{" "}
-                <strong>
-                  {formatCurrency(booking.totalAmount, booking.currency)}
-                </strong>
-              </p>
-
-              <p>
-                Currency: <strong>{booking.currency}</strong>
-              </p>
-
-              <p>
-                Booking status: <strong>{result.bookingStatus}</strong>
-              </p>
-
-              <p>
-                Payment status: <strong>{result.paymentStatus}</strong>
-              </p>
-
-              <p>
-                Paystack reference: <strong>{reference}</strong>
+                Please wait while we confirm your payment securely with
+                Paystack. Do not close this page.
               </p>
             </div>
+          )}
 
-            <Link className="primary-button" to="/my-bookings">
-              View My Bookings
-            </Link>
-          </>
-        )}
+          {!isVerifying && result && booking && (
+            <div className="payment-success-state">
+              <div className="payment-success-icon">
+                <span aria-hidden="true">✓</span>
+              </div>
 
-        {!isVerifying && error && (
-          <>
-            <h2>Payment verification unsuccessful</h2>
+              <span className="payment-confirmation-eyebrow">
+                PAYMENT COMPLETED
+              </span>
 
-            <p>{error}</p>
+              <h1>Payment successful!</h1>
 
-            {reference && (
-              <p>
-                Payment reference: <strong>{reference}</strong>
+              <p className="payment-success-description">
+                Your payment has been successfully verified by Paystack. Thank
+                you for choosing LittleSpace Hotel.
               </p>
-            )}
 
-            <p>
-              Your booking will only proceed to hotel confirmation after the
-              backend successfully verifies your Paystack payment.
-            </p>
+              {result.bookingStatus === "pending" && (
+                <div className="booking-pending-notice">
+                  <span className="booking-notice-icon">i</span>
 
-            <Link className="primary-button" to="/my-bookings">
-              View My Bookings
-            </Link>
-          </>
-        )}
+                  <div>
+                    <strong>Booking awaiting confirmation</strong>
+
+                    <p>
+                      Your booking has been received and is awaiting
+                      confirmation from the LittleSpace Hotel administration
+                      team. Your booking is not yet confirmed.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {result.bookingStatus === "confirmed" && (
+                <div className="booking-confirmed-notice">
+                  <span className="booking-notice-icon">✓</span>
+
+                  <div>
+                    <strong>Your booking is confirmed!</strong>
+
+                    <p>
+                      Your booking has been confirmed by the LittleSpace Hotel
+                      administration team.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="booking-confirmation-summary">
+                <div className="booking-summary-heading">
+                  <div>
+                    <span>YOUR RESERVATION</span>
+                    <h2>Booking Summary</h2>
+                  </div>
+
+                  <span className="booking-summary-reference">
+                    #{result.bookingId}
+                  </span>
+                </div>
+
+                <div className="booking-summary-reference-row">
+                  <span>Booking reference</span>
+                  <strong>{booking.bookingReference}</strong>
+                </div>
+
+                <div className="booking-summary-details">
+                  <div className="booking-summary-detail">
+                    <span>Hotel branch</span>
+                    <strong>{booking.branchName}</strong>
+                  </div>
+
+                  <div className="booking-summary-detail">
+                    <span>Room type</span>
+                    <strong>{booking.roomTypeName}</strong>
+                  </div>
+
+                  <div className="booking-summary-detail">
+                    <span>Check-in</span>
+                    <strong>{formatDate(booking.checkIn)}</strong>
+                  </div>
+
+                  <div className="booking-summary-detail">
+                    <span>Check-out</span>
+                    <strong>{formatDate(booking.checkOut)}</strong>
+                  </div>
+
+                  <div className="booking-summary-detail">
+                    <span>Number of nights</span>
+                    <strong>{booking.nights}</strong>
+                  </div>
+
+                  <div className="booking-summary-detail">
+                    <span>Nightly price</span>
+                    <strong>
+                      {formatCurrency(booking.nightlyPrice, booking.currency)}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="booking-summary-total">
+                  <div>
+                    <span>Total amount paid</span>
+                    <strong>
+                      {formatCurrency(booking.totalAmount, booking.currency)}
+                    </strong>
+                  </div>
+
+                  <span>{booking.currency}</span>
+                </div>
+
+                <div className="booking-summary-statuses">
+                  <div className="booking-summary-status-row">
+                    <span>Booking status</span>
+
+                    <strong
+                      className={`booking-status-label booking-status-${result.bookingStatus.toLowerCase()}`}
+                    >
+                      {result.bookingStatus.replace(/_/g, " ")}
+                    </strong>
+                  </div>
+
+                  <div className="booking-summary-status-row">
+                    <span>Payment status</span>
+
+                    <strong className="payment-status-label">
+                      {result.paymentStatus.replace(/_/g, " ")}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="booking-summary-payment-reference">
+                  <span>Paystack reference</span>
+                  <strong>{reference}</strong>
+                </div>
+              </div>
+
+              <Link
+                className="primary-button payment-confirmation-button"
+                to="/my-bookings"
+              >
+                View My Bookings
+                <span aria-hidden="true">→</span>
+              </Link>
+
+              <p className="payment-confirmation-footer">
+                Thank you for booking with LittleSpace Hotel.
+              </p>
+            </div>
+          )}
+
+          {!isVerifying && error && (
+            <div className="payment-error-state">
+              <div className="payment-error-icon">
+                <span aria-hidden="true">!</span>
+              </div>
+
+              <span className="payment-confirmation-eyebrow">
+                PAYMENT VERIFICATION
+              </span>
+
+              <h1>We couldn't verify your payment</h1>
+
+              <p>{error}</p>
+
+              {reference && (
+                <div className="payment-error-reference">
+                  <span>Payment reference</span>
+                  <strong>{reference}</strong>
+                </div>
+              )}
+
+              <p className="payment-error-note">
+                Your booking will only proceed to hotel confirmation after the
+                backend successfully verifies your Paystack payment. If you have
+                been charged, please contact LittleSpace support before
+                attempting another payment.
+              </p>
+
+              <Link
+                className="primary-button payment-confirmation-button"
+                to="/my-bookings"
+              >
+                View My Bookings
+                <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+          )}
+        </div>
       </section>
     </main>
   );
