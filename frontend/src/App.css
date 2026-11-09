@@ -3419,104 +3419,288 @@ img {
   font-weight: 700;
 }
 
-.super-admin-dashboard-cards {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 22px;
-}
-
-.super-admin-dashboard-card {
-  position: relative;
-  display: flex;
-  min-height: 230px;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 28px;
-  overflow: hidden;
+.super-admin-dashboard-message,
+.super-admin-dashboard-error,
+.super-admin-empty-state {
+  padding: 22px;
   border: 1px solid #e8e1d8;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #fff;
-  color: inherit;
-  text-decoration: none;
-  box-shadow: 0 4px 18px rgba(40, 37, 31, 0.035);
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
+  color: #777168;
+  font-size: 13px;
 }
 
-.super-admin-dashboard-card:hover {
-  transform: translateY(-4px);
-  border-color: #cbb9a5;
-  box-shadow: 0 12px 28px rgba(40, 37, 31, 0.09);
+.super-admin-dashboard-error {
+  border-color: #e8c8c3;
+  background: #fff8f7;
+  color: #a33d32;
 }
 
-.super-admin-card-icon {
+.super-admin-dashboard-error p {
+  margin: 0 0 12px;
+}
+
+.super-admin-dashboard-error button {
+  padding: 9px 16px;
+  border: 0;
+  border-radius: 6px;
+  background: #705b47;
+  color: #fff;
+  cursor: pointer;
+}
+
+.super-admin-overview-section,
+.super-admin-recent-section {
+  margin-bottom: 30px;
+}
+
+.super-admin-section-heading {
   display: flex;
-  width: 44px;
-  height: 44px;
   align-items: center;
-  justify-content: center;
-  margin-bottom: 24px;
-  border-radius: 9px;
-  background: #f2ece4;
-  color: #705b47;
-  font-family: Georgia, serif;
-  font-size: 15px;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 18px;
 }
 
-.super-admin-card-content {
-  max-width: 390px;
-}
-
-.super-admin-card-eyebrow {
-  display: block;
-  margin-bottom: 9px;
-  color: #927c64;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.3px;
-}
-
-.super-admin-card-content h2 {
-  margin: 0 0 10px;
+.super-admin-section-heading h2 {
+  margin: 0 0 5px;
   color: #28251f;
   font-family: Georgia, serif;
   font-size: 23px;
   font-weight: 500;
 }
 
-.super-admin-card-content p {
+.super-admin-section-heading p {
   margin: 0;
-  color: #777168;
-  font-size: 13px;
-  line-height: 1.7;
+  color: #827a70;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
-.super-admin-card-arrow {
-  position: absolute;
-  right: 27px;
-  bottom: 25px;
+.super-admin-section-heading > a {
+  color: #705b47;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.super-admin-section-heading > a:hover {
+  text-decoration: underline;
+}
+
+.super-admin-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.super-admin-overview-card {
+  min-width: 0;
+  padding: 23px;
+  border: 1px solid #e8e1d8;
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(40, 37, 31, 0.035);
+}
+
+.super-admin-overview-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 22px;
+  color: #777168;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.super-admin-overview-card-top span:last-child {
   display: flex;
   width: 34px;
   height: 34px;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e8e1d8;
-  border-radius: 50%;
-  color: #705b47;
-  font-size: 19px;
-  transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease;
+  border-radius: 8px;
+  background: #f2ece4;
+  color: #927c64;
+  font-family: Georgia, serif;
+  font-size: 11px;
 }
 
-.super-admin-dashboard-card:hover .super-admin-card-arrow {
-  transform: translateX(3px);
-  border-color: #705b47;
-  background: #705b47;
-  color: #fff;
+.super-admin-overview-card > strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #28251f;
+  font-family: Georgia, serif;
+  font-size: 32px;
+  font-weight: 500;
+}
+
+.super-admin-overview-card > p {
+  margin: 0;
+  color: #91877b;
+  font-size: 11px;
+}
+
+.super-admin-details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 30px;
+}
+
+.super-admin-detail-card {
+  min-width: 0;
+  padding: 23px;
+  border: 1px solid #e8e1d8;
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(40, 37, 31, 0.035);
+}
+
+.super-admin-detail-card h3 {
+  margin: 0 0 20px;
+  color: #28251f;
+  font-family: Georgia, serif;
+  font-size: 19px;
+  font-weight: 500;
+}
+
+.super-admin-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0ebe5;
+  color: #777168;
+  font-size: 12px;
+}
+
+.super-admin-stat-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.super-admin-stat-row strong {
+  color: #28251f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.super-admin-revenue-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #f8f5f0;
+}
+
+.super-admin-revenue-label {
+  margin-bottom: 12px;
+  color: #827565;
+  font-size: 12px;
+}
+
+.super-admin-revenue-card > strong {
+  color: #705b47;
+  font-family: Georgia, serif;
+  font-size: 29px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.super-admin-revenue-card > p {
+  margin: 12px 0 0;
+  color: #827a70;
+  font-size: 11px;
+}
+
+.super-admin-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e8e1d8;
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(40, 37, 31, 0.035);
+}
+
+.super-admin-bookings-table {
+  width: 100%;
+  min-width: 850px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.super-admin-bookings-table th {
+  padding: 15px 17px;
+  background: #f8f5f0;
+  color: #827565;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.super-admin-bookings-table td {
+  padding: 16px 17px;
+  border-top: 1px solid #f0ebe5;
+  color: #625b52;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.super-admin-bookings-table tbody tr:hover {
+  background: #fcfaf7;
+}
+
+.super-admin-bookings-table td:nth-child(1) {
+  color: #705b47;
+  font-weight: 700;
+}
+
+.super-admin-bookings-table td:nth-child(2) strong,
+.super-admin-bookings-table td:nth-child(2) span {
+  display: block;
+}
+
+.super-admin-bookings-table td:nth-child(2) strong {
+  margin-bottom: 5px;
+  color: #28251f;
+  font-size: 11px;
+}
+
+.super-admin-bookings-table td:nth-child(2) span {
+  color: #91877b;
+  font-size: 10px;
+}
+
+.super-admin-booking-status {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 20px;
+  background: #f2ece4;
+  color: #705b47;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.super-admin-booking-status.status-confirmed,
+.super-admin-booking-status.status-completed {
+  background: #eaf3e9;
+  color: #477449;
+}
+
+.super-admin-booking-status.status-pending {
+  background: #fff4df;
+  color: #98702d;
+}
+
+.super-admin-booking-status.status-cancelled,
+.super-admin-booking-status.status-rejected {
+  background: #fbeceb;
+  color: #a34c43;
 }
 
 .super-admin-dashboard-note {
@@ -3553,6 +3737,20 @@ img {
 
 /* Responsive Super Admin Dashboard */
 
+@media (max-width: 1100px) {
+  .super-admin-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .super-admin-details-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .super-admin-revenue-card {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 768px) {
   .super-admin-dashboard {
     padding: 24px 18px;
@@ -3567,14 +3765,21 @@ img {
     font-size: 29px;
   }
 
-  .super-admin-dashboard-cards {
-    grid-template-columns: 1fr;
-    gap: 16px;
+  .super-admin-overview-grid {
+    gap: 13px;
   }
 
-  .super-admin-dashboard-card {
-    min-height: 210px;
-    padding: 23px;
+  .super-admin-overview-card,
+  .super-admin-detail-card {
+    padding: 18px;
+  }
+
+  .super-admin-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .super-admin-revenue-card {
+    grid-column: auto;
   }
 }
 
@@ -3587,7 +3792,24 @@ img {
     font-size: 26px;
   }
 
-  .super-admin-card-content h2 {
+  .super-admin-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .super-admin-overview-card {
+    padding: 19px;
+  }
+
+  .super-admin-overview-card > strong {
+    font-size: 29px;
+  }
+
+  .super-admin-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .super-admin-section-heading h2 {
     font-size: 21px;
   }
 
