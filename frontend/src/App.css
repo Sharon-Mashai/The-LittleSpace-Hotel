@@ -7115,3 +7115,14 @@ img {
 .availability-form form .primary-button {
   margin-top: 4px;
 }
+/* Align review information with the Write a review heading */
+.review-form-section {
+  text-align: left;
+}
+
+.review-form-section h2,
+.review-form-section > p.review-description {
+  text-align: left;
+  margin-left: 0;
+  margin-right: 0;
+}
