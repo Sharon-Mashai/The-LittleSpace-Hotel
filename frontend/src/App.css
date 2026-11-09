@@ -6808,3 +6808,237 @@ img {
     text-align: right;
   }
 }
+
+/* =========================================
+   Guest booking email verification
+   Oat, cream and warm brown palette
+========================================= */
+
+.guest-booking-verification {
+  width: 100%;
+  max-width: 520px;
+  margin: 35px auto 60px;
+  padding: 42px 40px;
+  background: #fffdf9;
+  border: 1px solid #eee6da;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(91, 73, 48, 0.07);
+  text-align: center;
+}
+
+.guest-verification-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3ede3;
+  border-radius: 50%;
+  color: #8b7355;
+  font-size: 27px;
+}
+
+.guest-verification-eyebrow {
+  display: block;
+  margin-bottom: 12px;
+  color: #8b7355;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+}
+
+.guest-booking-verification h2 {
+  margin: 0 0 12px;
+  color: #39342d;
+  font-size: 25px;
+  font-weight: 600;
+}
+
+.guest-verification-description {
+  max-width: 390px;
+  margin: 0 auto 28px;
+  color: #81786c;
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.guest-verification-description strong {
+  color: #514638;
+  font-weight: 600;
+}
+
+.guest-verification-form {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  text-align: left;
+}
+
+.guest-verification-form label {
+  color: #514638;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.guest-verification-form input {
+  width: 100%;
+  min-height: 49px;
+  padding: 12px 15px;
+  border: 1px solid #e4dacb;
+  border-radius: 6px;
+  outline: none;
+  background: #ffffff;
+  color: #514638;
+  font-family: inherit;
+  font-size: 15px;
+  letter-spacing: 3px;
+  text-align: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.guest-verification-form input::placeholder {
+  color: #b4aa9b;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.guest-verification-form input:focus {
+  border-color: #a58b6b;
+  box-shadow: 0 0 0 3px rgba(165, 139, 107, 0.13);
+}
+
+.guest-verification-form button {
+  width: 100%;
+  min-height: 49px;
+  margin-top: 8px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: none;
+  border-radius: 6px;
+  background: #8b7355;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.guest-verification-form button:hover:not(:disabled) {
+  background: #725e46;
+  transform: translateY(-1px);
+}
+
+.guest-verification-form button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.guest-verification-form button span {
+  font-size: 18px;
+}
+
+.guest-verification-message,
+.guest-verification-error {
+  margin: 16px 0 0;
+  padding: 11px 13px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.guest-verification-message {
+  background: #f1f5ed;
+  color: #526b48;
+}
+
+.guest-verification-error {
+  background: #faf0ec;
+  color: #9a5545;
+}
+
+.guest-verification-change-email {
+  margin: 23px auto 0;
+  padding: 5px;
+  border: none;
+  background: transparent;
+  color: #8b7355;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.guest-verification-change-email:hover {
+  color: #66523d;
+  text-decoration: underline;
+}
+
+.guest-verification-security {
+  margin: 18px 0 0;
+  padding-top: 17px;
+  border-top: 1px solid #eee6da;
+  color: #a49a8c;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+/* Guest booking verification responsive layout */
+
+@media (max-width: 600px) {
+  .guest-booking-verification {
+    width: 100%;
+    margin: 20px auto 40px;
+    padding: 32px 20px;
+    border-radius: 9px;
+  }
+
+  .guest-verification-icon {
+    width: 52px;
+    height: 52px;
+    font-size: 24px;
+  }
+
+  .guest-booking-verification h2 {
+    font-size: 22px;
+  }
+
+  .guest-verification-description {
+    font-size: 12px;
+  }
+}
+
+/* Guest booking sign-out button */
+
+.customer-bookings > button {
+  display: block;
+  margin: 25px auto 35px;
+  padding: 12px 22px;
+  border: 1px solid #d9cbb7;
+  border-radius: 6px;
+  background: #f3ede3;
+  color: #806b50;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.customer-bookings > button:hover {
+  background: #e9dfd0;
+  border-color: #b9a488;
+  color: #66523d;
+}
+
+.customer-bookings > button:focus-visible {
+  outline: 3px solid rgba(165, 139, 107, 0.25);
+  outline-offset: 3px;
+}
