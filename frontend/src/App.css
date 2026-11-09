@@ -2222,6 +2222,20 @@ img {
   line-height: 1.7;
 }
 
+.room-type-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.room-type-images img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
 /* Availability and booking forms */
 .account-page:has(.hotel-reviews-section) > .empty-state form {
   display: grid;
