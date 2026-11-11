@@ -14,11 +14,11 @@ The application is designed around one hotel brand with multiple branches in dif
 
 **Home Page**
 
-![LittleSpace Hotel Home Page](docs/screenshots/home-page.png)
+![LittleSpace Hotel Home Page](frontend/src/assets/Preview.png)
 
 **Hotel Branches**
 
-![Hotel Branches](docs/screenshots/hotel-branches.png)
+![Hotel Branches](./frontend/src/assets/Hotels.png)
 
 **Room Details**
 
@@ -28,9 +28,9 @@ The application is designed around one hotel brand with multiple branches in dif
 
 ![Room Availability](docs/screenshots/room-availability.png)
 
-**Booking and Checkout**
+**Bookings**
 
-![Booking and Checkout](docs/screenshots/booking-checkout.png)
+![Bookings](frontend/src/assets/MyBookings.png)
 
 **Payment**
 
