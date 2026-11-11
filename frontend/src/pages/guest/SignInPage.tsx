@@ -156,7 +156,7 @@ function SignInPage() {
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
               theme="outline"
-              size="large"
+              size="medium"
               shape="rectangular"
               text="signin_with"
               width="320"
