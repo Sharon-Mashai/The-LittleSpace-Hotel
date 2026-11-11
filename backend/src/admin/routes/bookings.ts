@@ -137,7 +137,6 @@ router.patch(
     let transactionStarted = false;
 
     // Details required for the confirmation email.
-    // The email is sent asynchronously after the transaction commits.
     let confirmationEmailDetails: {
       guestName: string;
       guestEmail: string;
@@ -407,24 +406,27 @@ router.patch(
         successMessage = "Booking confirmed successfully.";
 
         if (confirmationEmailDetails && confirmationEmailDetails.guestEmail) {
-          // Send the email without making the admin wait for SMTP.
           const emailDetails = confirmationEmailDetails;
 
-          void sendBookingConfirmationEmail(emailDetails)
-            .then(() => {
-              console.log(
-                `Booking confirmation email sent to ${emailDetails.guestEmail}.`,
-              );
-            })
-            .catch((emailError) => {
-              console.error(
-                "Booking was confirmed, but the confirmation email could not be sent:",
-                emailError,
-              );
-            });
+          try {
+            // Wait for Gmail SMTP to finish before returning the response.
+            await sendBookingConfirmationEmail(emailDetails);
 
-          successMessage =
-            "Booking confirmed successfully. The confirmation email is being sent.";
+            console.log(
+              `Booking confirmation email sent to ${emailDetails.guestEmail}.`,
+            );
+
+            successMessage =
+              "Booking confirmed successfully. Confirmation email sent.";
+          } catch (emailError) {
+            console.error(
+              "Booking was confirmed, but the confirmation email could not be sent:",
+              emailError,
+            );
+
+            successMessage =
+              "Booking confirmed successfully, but the confirmation email could not be sent.";
+          }
         } else {
           successMessage =
             "Booking confirmed successfully, but guest email details could not be retrieved.";
@@ -436,7 +438,7 @@ router.patch(
         successMessage = "Booking rejected successfully.";
       }
 
-      // Return the response without waiting for email delivery.
+      // Return the response after the email delivery attempt has completed.
       res.status(200).json({
         success: true,
         message: successMessage,
