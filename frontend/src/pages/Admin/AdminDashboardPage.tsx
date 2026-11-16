@@ -129,11 +129,11 @@ function AdminDashboardPage() {
           icon: "02",
         },
         {
-          label: "Administrators",
-          value: formatNumber(dashboard.administrators.total_administrators),
+          label: "Room Types",
+          value: formatNumber(dashboard.roomTypes.total_room_types),
           detail: `${formatNumber(
-            dashboard.administrators.active_administrators,
-          )} active accounts`,
+            dashboard.roomTypes.active_room_types,
+          )} active room types`,
           icon: "03",
         },
         {
