@@ -2,54 +2,51 @@
 
 The LittleSpace Hotel is a hotel booking web application that allows guests to explore hotel branches, check room availability, make bookings and pay online. It also provides an administration area where authorised staff can manage bookings.
 
-The application is designed around one hotel brand with multiple branches in different locations.
+The application is designed around one hotel brand with multiple branches in different locations across South Africa.
+
+## Live Application
+
+**Visit The LittleSpace Hotel:**
+
+[The LittleSpace Hotel](https://the-little-space-hotel.vercel.app/)
+
+Guests can explore hotel branches, view room types, check availability and make bookings through the live application.
+
+## Figma Design Documentation
+
+The application's design process and documentation are available in Figma.
+
+| Design Document | Figma Link |
+|---|---|
+| Prototype | [View Prototype](https://www.figma.com/design/ViWWpFnUhJuZvYX0x9yIAX/LittleSpace-Hotel?node-id=3-26&t=09OV86ab4edUgS3d-1) |
+| Moodboard | [View Moodboard](https://www.figma.com/design/ViWWpFnUhJuZvYX0x9yIAX/LittleSpace-Hotel?node-id=51-4&t=09OV86ab4edUgS3d-1) |
+| Wireframes | [View Wireframes](https://www.figma.com/design/ViWWpFnUhJuZvYX0x9yIAX/LittleSpace-Hotel?node-id=19-154&t=09OV86ab4edUgS3d-1) |
+| User Flow | [View User Flow](https://www.figma.com/design/ViWWpFnUhJuZvYX0x9yIAX/LittleSpace-Hotel?node-id=3-27&t=09OV86ab4edUgS3d-1) |
+| Information Architecture (IA) | [View Information Architecture](https://www.figma.com/design/ViWWpFnUhJuZvYX0x9yIAX/LittleSpace-Hotel?node-id=8-37&t=09OV86ab4edUgS3d-1) |
 
 ## Application Screenshots
 
 ### Application Overview
 
-![The LittleSpace Hotel Application Overview](docs/screenshots/app-overview.png)
-
-### Guest Application
-
-**Home Page**
-
 ![LittleSpace Hotel Home Page](frontend/src/assets/Preview.png)
 
-**Hotel Branches**
+### Hotel Branches
 
-![Hotel Branches](./frontend/src/assets/Hotels.png)
+![Hotel Branches](frontend/src/assets/Hotels.png)
 
-**Room Details**
-
-![Room Details](docs/screenshots/room-details.png)
-
-**Room Availability**
-
-![Room Availability](docs/screenshots/room-availability.png)
-
-**Bookings**
+### Bookings
 
 ![Bookings](frontend/src/assets/MyBookings.png)
 
-**Payment**
-
-![Paystack Payment](docs/screenshots/payment.png)
-
-**Guest Authentication**
-
-![Guest Authentication](docs/screenshots/guest-authentication.png)
-
 ### Admin Application
 
-**Admin Dashboard**
+#### Admin Dashboard
 
-![Admin Dashboard](docs/screenshots/admin-dashboard.png)
+![Admin Dashboard](frontend/src/assets/AdminDashboard.png)
 
-**Booking Management**
+#### Booking Management
 
-![Admin Booking Management](docs/screenshots/booking-management.png)
-
+![Admin Booking Management](frontend/src/assets/BookingMan.png)
 
 ## Features
 
@@ -60,19 +57,30 @@ The application is designed around one hotel brand with multiple branches in dif
 - Check room availability using check-in and check-out dates.
 - Make bookings as a registered guest or without creating an account.
 - Enter guest details during checkout.
-- Pay for bookings securely using Paystack.
+- Pay for bookings using Paystack.
 - Register and sign in to a guest account.
+- Sign in using Google.
 - Request a password reset through email.
 - Reset an account password using a secure, time-limited link.
-- View booking information where supported by the application.
+- View and manage booking information where supported by the application.
 
 ### Admin Features
 
-- Access the administration area.
+- Access the administration area through the application.
 - View and manage guest bookings.
+- Manage hotel branches and room types.
+- Upload and manage branch and room type images.
 - Confirm, cancel or reject bookings, subject to booking and payment rules.
 - Confirm eligible bookings after successful payment.
 - Send booking confirmation emails when an administrator confirms a booking.
+- Manage administrative access according to assigned permissions.
+
+## Administrator Access
+
+Administrators can access the administration area using:
+Email Address : mashaisharon5@gmail.com
+Password : flowersAdmin
+
 
 ## Technologies Used
 
@@ -82,7 +90,9 @@ The application is designed around one hotel brand with multiple branches in dif
 - TypeScript
 - Vite
 - React Router
+- Redux Toolkit
 - CSS
+- React Leaflet
 
 ### Backend
 
@@ -91,13 +101,19 @@ The application is designed around one hotel brand with multiple branches in dif
 - TypeScript
 - PostgreSQL
 - `pg` (node-postgres)
+- JSON Web Tokens (JWT)
+- bcryptjs
+- Google OAuth
+- Multer for image uploads
 - Paystack payment integration
 - Nodemailer for email delivery
-- bcrypt for password hashing
 
-## Project Structure
+### Database and Deployment
 
-The project is organised into separate frontend and backend applications.
+- PostgreSQL hosted on Neon
+- Vercel for frontend deployment
+- Render for backend hosting
+
 
 ## Getting Started
 
@@ -107,12 +123,13 @@ Follow these instructions to run the project on your local machine.
 
 Install the following before starting:
 
-- [Node.js](https://nodejs.org/)
+- Node.js
 - npm (included with Node.js)
 - PostgreSQL
-- A code editor such as [Visual Studio Code](https://code.visualstudio.com/)
+- Visual Studio Code
 - A Paystack test account for testing payments
 - SMTP email credentials for email functionality
+- Google OAuth credentials if testing Google sign-in
 
 ### 1. Clone the Repository
 
@@ -128,7 +145,7 @@ cd The-LittleSpace-Hotel
 
 ### 2. Set Up the Backend
 
-Open a terminal and navigate to the backend folder:
+Navigate to the backend folder:
 
 ```bash
 cd backend
@@ -139,6 +156,8 @@ Install the dependencies:
 ```bash
 npm install
 ```
+
+Configure the backend environment variables in a `.env` file using the required database, authentication, Paystack, Google OAuth and SMTP settings.
 
 Start the backend development server:
 
@@ -160,10 +179,12 @@ Install the dependencies:
 npm install
 ```
 
-Configure the frontend API base URL using the environment variable expected by the frontend API service. For local development, it should point to your backend, for example:
+Configure the frontend API base URL using the environment variable expected by the frontend API service.
+
+For local development:
 
 ```env
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=http://localhost:5000
 ```
 
 Start the frontend development server:
@@ -189,13 +210,16 @@ The database supports information such as:
 - Room availability
 - Guest accounts
 - Bookings
+- Booking rooms
 - Payments
+- Favourites
+- Notifications
 - Password reset tokens
 - Administrative access
 
-Configure your PostgreSQL connection using the backend environment variables.
+Configure the PostgreSQL connection using the backend environment variables.
 
-Ensure that the database schema has been created before testing the application's database-dependent features.
+Ensure that the database schema and required migrations have been applied before testing the application's database-dependent features.
 
 ## Payments
 
@@ -231,10 +255,13 @@ The application includes security-related measures such as:
 - Password hashing.
 - Time-limited password reset tokens.
 - Secure password reset token storage using hashes.
+- JWT-based authentication.
+- Role-based and permission-based administrative access.
 - Payment verification through the backend.
 - Paystack webhook signature verification.
 - Environment variables for sensitive configuration.
 - Validation of booking and payment status before administrative actions.
+- Image upload validation and file size restrictions.
 
 ## Development Scripts
 
