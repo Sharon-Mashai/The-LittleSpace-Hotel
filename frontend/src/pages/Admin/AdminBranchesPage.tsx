@@ -148,20 +148,14 @@ function AdminBranchesPage() {
     };
   }, []);
 
-  // Create and clean up the selected image preview URL.
+  // Revoke preview URLs when they are replaced or the component unmounts.
   useEffect(() => {
-    if (!selectedImage) {
-      setImagePreviewUrl("");
-      return;
-    }
-
-    const previewUrl = URL.createObjectURL(selectedImage);
-    setImagePreviewUrl(previewUrl);
-
     return () => {
-      URL.revokeObjectURL(previewUrl);
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
     };
-  }, [selectedImage]);
+  }, [imagePreviewUrl]);
 
   function handleInputChange(
     event: React.ChangeEvent<
@@ -181,6 +175,7 @@ function AdminBranchesPage() {
 
     if (!file) {
       setSelectedImage(null);
+      setImagePreviewUrl("");
       return;
     }
 
@@ -188,6 +183,7 @@ function AdminBranchesPage() {
       setError("Please select a JPEG, PNG or WebP image.");
       event.target.value = "";
       setSelectedImage(null);
+      setImagePreviewUrl("");
       return;
     }
 
@@ -195,17 +191,20 @@ function AdminBranchesPage() {
       setError("The selected image must not exceed 5 MB.");
       event.target.value = "";
       setSelectedImage(null);
+      setImagePreviewUrl("");
       return;
     }
 
     setError("");
     setSelectedImage(file);
+    setImagePreviewUrl(URL.createObjectURL(file));
   }
 
   function openCreateForm() {
     setEditingBranchId(null);
     setFormData(emptyForm);
     setSelectedImage(null);
+    setImagePreviewUrl("");
     setCurrentImageUrl(null);
     setMessage("");
     setError("");
@@ -231,6 +230,7 @@ function AdminBranchesPage() {
     });
 
     setSelectedImage(null);
+    setImagePreviewUrl("");
     setCurrentImageUrl(branch.image_url ?? null);
     setMessage("");
     setError("");
