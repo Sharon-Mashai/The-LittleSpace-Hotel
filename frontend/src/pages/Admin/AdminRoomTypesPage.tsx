@@ -847,7 +847,10 @@ function AdminRoomTypesPage() {
                     onChange={handleImageChange}
                   />
 
-                  <span className="admin-room-type-hint">
+                  <span
+                    className="admin-room-type-hint"
+                    style={{ fontSize: "0.75rem" }}
+                  >
                     Choose a JPEG, PNG or WebP image. Maximum size: 5 MB.
                   </span>
 
