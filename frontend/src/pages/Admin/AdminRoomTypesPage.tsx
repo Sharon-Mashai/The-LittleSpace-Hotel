@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "../../services/api";
 import { getAuthToken } from "../../services/auth";
-import { getAdminPermissions, type AdminPermission,} from "../../services/adminPermissions";
+import {
+  getAdminPermissions,
+  type AdminPermission,
+} from "../../services/adminPermissions";
 import ConfirmationModal from "../../components/ConfirmationModal";
 
 type AdminBranch = {
@@ -26,6 +29,7 @@ type AdminRoomType = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  image_url?: string | null;
 };
 
 type RoomTypesResponse = {
@@ -57,6 +61,10 @@ type RoomTypeFormData = {
   facilities: string;
   policies: string;
 };
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const emptyForm: RoomTypeFormData = {
   branchId: "",
@@ -110,20 +118,36 @@ function AdminRoomTypesPage() {
   const [branches, setBranches] = useState<AdminBranch[]>([]);
   const [permissions, setPermissions] = useState<AdminPermission[]>([]);
   const [formData, setFormData] = useState<RoomTypeFormData>(emptyForm);
+
   const [editingRoomTypeId, setEditingRoomTypeId] = useState<number | null>(
     null,
   );
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+
   const [pendingRoomTypeConfirmation, setPendingRoomTypeConfirmation] =
     useState<AdminRoomType | null>(null);
+
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
   const canCreate = permissions.includes("room_types.create");
   const canEdit = permissions.includes("room_types.edit");
+
+  // Release temporary preview URLs when they are replaced or the page unmounts.
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
+    };
+  }, [imagePreviewUrl]);
 
   useEffect(() => {
     let isMounted = true;
@@ -191,12 +215,45 @@ function AdminRoomTypesPage() {
     }));
   }
 
+  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setError("Please select a JPEG, PNG or WebP image.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      setError("The image must not exceed 5 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+
+    setSelectedImage(file);
+    setImagePreviewUrl(previewUrl);
+    setError("");
+  }
+
+  function clearSelectedImage() {
+    setSelectedImage(null);
+    setImagePreviewUrl(null);
+  }
+
   function openCreateForm() {
     setEditingRoomTypeId(null);
     setFormData({
       ...emptyForm,
       branchId: branches[0] ? String(branches[0].id) : "",
     });
+
+    clearSelectedImage();
     setError("");
     setMessage("");
     setIsFormOpen(true);
@@ -217,6 +274,7 @@ function AdminRoomTypesPage() {
       policies: roomType.policies ?? "",
     });
 
+    clearSelectedImage();
     setError("");
     setMessage("");
     setIsFormOpen(true);
@@ -226,6 +284,7 @@ function AdminRoomTypesPage() {
     setIsFormOpen(false);
     setEditingRoomTypeId(null);
     setFormData(emptyForm);
+    clearSelectedImage();
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -271,13 +330,13 @@ function AdminRoomTypesPage() {
     const payload = {
       branchId,
       name: formData.name.trim(),
-      description: formData.description.trim() || null,
+      description: formData.description.trim(),
       capacityAdults,
       capacityChildren,
       basePrice,
       currency: formData.currency.trim().toUpperCase(),
       facilities,
-      policies: formData.policies.trim() || null,
+      policies: formData.policies.trim(),
     };
 
     if (!payload.name) {
@@ -288,6 +347,23 @@ function AdminRoomTypesPage() {
     if (!/^[A-Z]{3}$/.test(payload.currency)) {
       setError("Currency must be a three-letter uppercase code.");
       return;
+    }
+
+    // Send the room type details and optional image as multipart form data.
+    const multipartData = new FormData();
+
+    multipartData.append("branchId", String(payload.branchId));
+    multipartData.append("name", payload.name);
+    multipartData.append("description", payload.description);
+    multipartData.append("capacityAdults", String(payload.capacityAdults));
+    multipartData.append("capacityChildren", String(payload.capacityChildren));
+    multipartData.append("basePrice", String(payload.basePrice));
+    multipartData.append("currency", payload.currency);
+    multipartData.append("facilities", JSON.stringify(payload.facilities));
+    multipartData.append("policies", payload.policies);
+
+    if (selectedImage) {
+      multipartData.append("image", selectedImage);
     }
 
     setIsSaving(true);
@@ -301,7 +377,7 @@ function AdminRoomTypesPage() {
           {
             method: "PATCH",
             token,
-            body: payload,
+            body: multipartData,
           },
         );
 
@@ -331,7 +407,7 @@ function AdminRoomTypesPage() {
           {
             method: "POST",
             token,
-            body: payload,
+            body: multipartData,
           },
         );
 
@@ -475,12 +551,14 @@ function AdminRoomTypesPage() {
           <strong>{roomTypes.length}</strong>
           <span>Total room types</span>
         </div>
+
         <div>
           <strong>
             {roomTypes.filter((roomType) => roomType.is_active).length}
           </strong>
           <span>Active room types</span>
         </div>
+
         <div>
           <strong>
             {roomTypes.filter((roomType) => !roomType.is_active).length}
@@ -519,6 +597,15 @@ function AdminRoomTypesPage() {
           <div className="admin-room-types-grid">
             {filteredRoomTypes.map((roomType) => (
               <article className="admin-room-type-card" key={roomType.id}>
+                {roomType.image_url && (
+                  <div className="admin-room-type-image">
+                    <img
+                      src={roomType.image_url}
+                      alt={`${roomType.name} at ${roomType.branch_name}`}
+                    />
+                  </div>
+                )}
+
                 <div className="admin-room-type-card-header">
                   <div>
                     <p className="admin-page-eyebrow">{roomType.branch_name}</p>
@@ -588,8 +675,8 @@ function AdminRoomTypesPage() {
 
                     <button
                       type="button"
-                      className={`admin-branch-status-button ${
-                        roomType.is_active ? "deactivate" : "activate"
+                      className={`admin-branch-status-button${
+                        roomType.is_active ? " deactivate" : " activate"
                       }`}
                       onClick={() => setPendingRoomTypeConfirmation(roomType)}
                     >
@@ -646,6 +733,7 @@ function AdminRoomTypesPage() {
                     required
                   >
                     <option value="">Select a branch</option>
+
                     {branches.map((branch) => (
                       <option key={branch.id} value={branch.id}>
                         {branch.name} — {branch.city}
@@ -748,6 +836,57 @@ function AdminRoomTypesPage() {
                     rows={3}
                   />
                 </label>
+
+                <div className="full-width admin-room-type-image-upload">
+                  <label htmlFor="room-type-image">Primary room image</label>
+
+                  <input
+                    id="room-type-image"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageChange}
+                  />
+
+                  <span className="admin-room-type-hint">
+                    Choose a JPEG, PNG or WebP image. Maximum size: 5 MB.
+                  </span>
+
+                  {imagePreviewUrl ? (
+                    <div className="admin-room-type-image-preview">
+                      <img
+                        src={imagePreviewUrl}
+                        alt="Selected room type preview"
+                      />
+                      <button
+                        type="button"
+                        className="admin-secondary-button"
+                        onClick={clearSelectedImage}
+                        disabled={isSaving}
+                      >
+                        Remove selected image
+                      </button>
+                    </div>
+                  ) : editingRoomTypeId !== null &&
+                    roomTypes.find(
+                      (roomType) => roomType.id === editingRoomTypeId,
+                    )?.image_url ? (
+                    <div className="admin-room-type-image-preview">
+                      <img
+                        src={
+                          roomTypes.find(
+                            (roomType) => roomType.id === editingRoomTypeId,
+                          )?.image_url ?? ""
+                        }
+                        alt="Current room type"
+                      />
+                      <p>
+                        Current saved image. Select a new image to replace it.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="admin-room-type-hint">No image selected.</p>
+                  )}
+                </div>
               </div>
 
               <div className="admin-branch-form-footer">
@@ -776,15 +915,14 @@ function AdminRoomTypesPage() {
           </section>
         </div>
       )}
+
       {pendingRoomTypeConfirmation && (
         <ConfirmationModal
           title={`Are you sure you want to ${
             pendingRoomTypeConfirmation.is_active ? "deactivate" : "activate"
           } this room type?`}
           message={`${pendingRoomTypeConfirmation.name} will be ${
-            pendingRoomTypeConfirmation.is_active
-              ? "deactivated"
-              : "activated"
+            pendingRoomTypeConfirmation.is_active ? "deactivated" : "activated"
           }.`}
           confirmText={
             pendingRoomTypeConfirmation.is_active ? "Deactivate" : "Activate"
