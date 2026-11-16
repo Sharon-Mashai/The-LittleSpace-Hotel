@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "../../services/api";
 import { getAuthToken } from "../../services/auth";
-import { getAdminPermissions, type AdminPermission,} from "../../services/adminPermissions";
+import {
+  getAdminPermissions,
+  type AdminPermission,
+} from "../../services/adminPermissions";
 import ConfirmationModal from "../../components/ConfirmationModal";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 type AdminBranch = {
   id: number;
@@ -20,6 +27,7 @@ type AdminBranch = {
   star_rating: number | null;
   is_active: boolean;
   created_at: string;
+  image_url?: string | null;
 };
 
 type BranchesResponse = {
@@ -64,6 +72,14 @@ const emptyForm: BranchFormData = {
   starRating: "",
 };
 
+function getBranchImageUrl(imageUrl: string): string {
+  if (/^https?:\/\//i.test(imageUrl)) {
+    return imageUrl;
+  }
+
+  return `${API_BASE_URL}${imageUrl}`;
+}
+
 function AdminBranchesPage() {
   const [branches, setBranches] = useState<AdminBranch[]>([]);
   const [permissions, setPermissions] = useState<AdminPermission[]>([]);
@@ -72,6 +88,9 @@ function AdminBranchesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [pendingBranchConfirmation, setPendingBranchConfirmation] =
     useState<AdminBranch | null>(null);
   const [error, setError] = useState("");
@@ -129,6 +148,21 @@ function AdminBranchesPage() {
     };
   }, []);
 
+  // Create and clean up the selected image preview URL.
+  useEffect(() => {
+    if (!selectedImage) {
+      setImagePreviewUrl("");
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(selectedImage);
+    setImagePreviewUrl(previewUrl);
+
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [selectedImage]);
+
   function handleInputChange(
     event: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -142,9 +176,37 @@ function AdminBranchesPage() {
     }));
   }
 
+  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      setSelectedImage(null);
+      return;
+    }
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setError("Please select a JPEG, PNG or WebP image.");
+      event.target.value = "";
+      setSelectedImage(null);
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      setError("The selected image must not exceed 5 MB.");
+      event.target.value = "";
+      setSelectedImage(null);
+      return;
+    }
+
+    setError("");
+    setSelectedImage(file);
+  }
+
   function openCreateForm() {
     setEditingBranchId(null);
     setFormData(emptyForm);
+    setSelectedImage(null);
+    setCurrentImageUrl(null);
     setMessage("");
     setError("");
     setIsFormOpen(true);
@@ -168,6 +230,8 @@ function AdminBranchesPage() {
       starRating: branch.star_rating?.toString() ?? "",
     });
 
+    setSelectedImage(null);
+    setCurrentImageUrl(branch.image_url ?? null);
     setMessage("");
     setError("");
     setIsFormOpen(true);
@@ -177,6 +241,9 @@ function AdminBranchesPage() {
     setIsFormOpen(false);
     setEditingBranchId(null);
     setFormData(emptyForm);
+    setSelectedImage(null);
+    setCurrentImageUrl(null);
+    setImagePreviewUrl("");
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -196,35 +263,47 @@ function AdminBranchesPage() {
     const payload = {
       name: formData.name.trim(),
       slug: formData.slug.trim(),
-      description: formData.description.trim() || null,
+      description: formData.description.trim(),
       addressLine: formData.addressLine.trim(),
-      suburb: formData.suburb.trim() || null,
+      suburb: formData.suburb.trim(),
       city: formData.city.trim(),
-      province: formData.province.trim() || null,
+      province: formData.province.trim(),
       country: formData.country.trim(),
-      postalCode: formData.postalCode.trim() || null,
-      latitude:
-        formData.latitude.trim() === "" ? null : Number(formData.latitude),
-      longitude:
-        formData.longitude.trim() === "" ? null : Number(formData.longitude),
-      starRating:
-        formData.starRating.trim() === "" ? null : Number(formData.starRating),
+      postalCode: formData.postalCode.trim(),
+      latitude: formData.latitude.trim(),
+      longitude: formData.longitude.trim(),
+      starRating: formData.starRating.trim(),
     };
+
+    const formDataToSend = new FormData();
+
+    Object.entries(payload).forEach(([key, value]) => {
+      formDataToSend.append(key, value);
+    });
+
+    if (selectedImage) {
+      formDataToSend.append("image", selectedImage);
+    }
 
     try {
       let response: BranchResponse;
 
       if (editingBranchId !== null) {
+        const currentBranch = branches.find(
+          (branch) => branch.id === editingBranchId,
+        );
+
+        formDataToSend.append(
+          "isActive",
+          String(currentBranch?.is_active ?? true),
+        );
+
         response = await apiRequest<BranchResponse>(
           `/admin/branches/${editingBranchId}`,
           {
             method: "PATCH",
             token,
-            body: {
-              ...payload,
-              isActive: branches.find((branch) => branch.id === editingBranchId)
-                ?.is_active,
-            },
+            body: formDataToSend,
           },
         );
 
@@ -239,7 +318,7 @@ function AdminBranchesPage() {
         response = await apiRequest<BranchResponse>("/admin/branches", {
           method: "POST",
           token,
-          body: payload,
+          body: formDataToSend,
         });
 
         setBranches((previous) => [...previous, response.data]);
@@ -315,6 +394,10 @@ function AdminBranchesPage() {
     );
   }
 
+  const displayedImageUrl =
+    imagePreviewUrl ||
+    (currentImageUrl ? getBranchImageUrl(currentImageUrl) : "");
+
   return (
     <div className="admin-page admin-branches-page">
       <div className="admin-page-header">
@@ -375,6 +458,15 @@ function AdminBranchesPage() {
         <div className="admin-branches-grid">
           {branches.map((branch) => (
             <article className="admin-branch-card" key={branch.id}>
+              {branch.image_url && (
+                <img
+                  className="admin-branch-card-image"
+                  src={getBranchImageUrl(branch.image_url)}
+                  alt={`${branch.name} hotel`}
+                  loading="lazy"
+                />
+              )}
+
               <div className="admin-branch-card-header">
                 <div>
                   <p className="admin-page-eyebrow">HOTEL LOCATION</p>
@@ -592,6 +684,29 @@ function AdminBranchesPage() {
                     onChange={handleInputChange}
                   />
                 </label>
+
+                <label className="full-width">
+                  Branch image
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageChange}
+                  />
+                  <small>
+                    Upload a JPEG, PNG or WebP image. Maximum size: 5 MB.
+                  </small>
+                </label>
+
+                {displayedImageUrl && (
+                  <div className="admin-branch-image-preview full-width">
+                    <p>
+                      {selectedImage
+                        ? "Selected image preview"
+                        : "Current branch image"}
+                    </p>
+                    <img src={displayedImageUrl} alt="Branch image preview" />
+                  </div>
+                )}
               </div>
 
               <div className="admin-branch-form-footer">
@@ -620,6 +735,7 @@ function AdminBranchesPage() {
           </section>
         </div>
       )}
+
       {pendingBranchConfirmation && (
         <ConfirmationModal
           title={`Are you sure you want to ${
