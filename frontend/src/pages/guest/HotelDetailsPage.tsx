@@ -52,6 +52,7 @@ function getBranchImage(branchName: string): string {
   return capeTownImage;
 }
 
+// Return the existing local images for a room type as fallbacks.
 function getRoomTypeImages(roomName: string): string[] {
   const name = roomName.toLowerCase();
 
@@ -66,6 +67,19 @@ function getRoomTypeImages(roomName: string): string[] {
   return [];
 }
 
+// Convert the backend image path into a complete image URL.
+function getRoomImageUrl(imageUrl?: string | null): string | null {
+  if (!imageUrl) return null;
+
+  if (/^https?:\/\//i.test(imageUrl)) {
+    return imageUrl;
+  }
+
+  const apiBaseUrl = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
+
+  return `${apiBaseUrl}${imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`}`;
+}
+
 function formatPrice(price: number | string, currency: string) {
   return new Intl.NumberFormat("en-ZA", {
     style: "currency",
@@ -75,6 +89,7 @@ function formatPrice(price: number | string, currency: string) {
 
 type RoomTypeCardProps = {
   room: RoomType;
+  imageUrl?: string | null;
   availableRooms?: number;
   onSelect?: () => void;
   isSelected?: boolean;
@@ -82,11 +97,16 @@ type RoomTypeCardProps = {
 
 function RoomTypeCard({
   room,
+  imageUrl,
   availableRooms,
   onSelect,
   isSelected = false,
 }: RoomTypeCardProps) {
-  const images = getRoomTypeImages(room.name);
+  // Prefer the image uploaded by the administrator.
+  const uploadedImage = getRoomImageUrl(room.image_url ?? imageUrl);
+
+  // Keep the existing local images when no uploaded image is available.
+  const images = uploadedImage ? [uploadedImage] : getRoomTypeImages(room.name);
 
   return (
     <article
@@ -108,8 +128,10 @@ function RoomTypeCard({
           ))}
         </div>
       )}
+
       <div>
         <h3>{room.name}</h3>
+
         {room.description && <p>{room.description}</p>}
 
         <p>
@@ -128,11 +150,7 @@ function RoomTypeCard({
       </div>
 
       {onSelect && (
-        <button
-          className="primary-button"
-          type="button"
-          onClick={onSelect}
-        >
+        <button className="primary-button" type="button" onClick={onSelect}>
           {isSelected ? "Room selected" : "Select this room"}
         </button>
       )}
@@ -993,6 +1011,10 @@ function HotelDetailsPage() {
                 <RoomTypeCard
                   key={room.id}
                   room={room}
+                  imageUrl={
+                    roomTypes.find((roomType) => roomType.id === room.id)
+                      ?.image_url
+                  }
                   availableRooms={room.available_rooms}
                   isSelected={selectedRoom?.id === room.id}
                   onSelect={() => {
