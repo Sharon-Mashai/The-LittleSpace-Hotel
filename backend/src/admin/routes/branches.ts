@@ -1,12 +1,160 @@
 import { Router } from "express";
+import type { PoolClient } from "pg";
 import { pool } from "../../config/db.js";
 import {
   authenticateAdmin,
   requirePermission,
   type AuthenticatedAdminRequest,
 } from "../middleware/auth.js";
+import {
+  uploadSingleImage,
+  isSupportedImage,
+} from "../../middleware/imageUpload.js";
 
 const router = Router();
+
+function parseOptionalNumber(value: unknown): number | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || value === "") {
+    return null;
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : Number.NaN;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : Number.NaN;
+  }
+
+  return Number.NaN;
+}
+
+function getErrorCode(error: unknown): string | undefined {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+  ) {
+    return error.code;
+  }
+
+  return undefined;
+}
+
+// Save or replace the primary branch image inside an existing transaction.
+async function savePrimaryBranchImage(
+  client: PoolClient,
+  branchId: number,
+  file: Express.Multer.File,
+  caption: string,
+): Promise<string> {
+  const existingPhoto = await client.query(
+    `
+      SELECT id
+      FROM accommodation_photos
+      WHERE branch_id = $1
+        AND is_primary = TRUE
+      ORDER BY display_order ASC, id ASC
+      LIMIT 1
+      FOR UPDATE
+    `,
+    [branchId],
+  );
+
+  let photoId: number;
+
+  if (existingPhoto.rows.length > 0) {
+    photoId = Number(existingPhoto.rows[0].id);
+
+    await client.query(
+      `
+        UPDATE accommodation_photos
+        SET
+          image_data = $1,
+          mime_type = $2,
+          file_size = $3,
+          caption = $4,
+          photo_url = $5
+        WHERE id = $6
+      `,
+      [
+        file.buffer,
+        file.mimetype,
+        file.size,
+        caption,
+        `/api/accommodations/photos/${photoId}/image`,
+        photoId,
+      ],
+    );
+  } else {
+    const photoResult = await client.query(
+      `
+        INSERT INTO accommodation_photos (
+          branch_id,
+          photo_url,
+          caption,
+          is_primary,
+          display_order,
+          image_data,
+          mime_type,
+          file_size
+        )
+        VALUES ($1, $2, $3, TRUE, 0, $4, $5, $6)
+        RETURNING id
+      `,
+      [
+        branchId,
+        "/api/accommodations/photos/pending/image",
+        caption,
+        file.buffer,
+        file.mimetype,
+        file.size,
+      ],
+    );
+
+    photoId = Number(photoResult.rows[0].id);
+
+    await client.query(
+      `
+        UPDATE accommodation_photos
+        SET photo_url = $1
+        WHERE id = $2
+      `,
+      [`/api/accommodations/photos/${photoId}/image`, photoId],
+    );
+  }
+
+  return `/api/accommodations/photos/${photoId}/image`;
+}
+
+// Retrieve a branch together with its primary image URL.
+async function getBranchWithImage(client: PoolClient, branchId: number) {
+  const result = await client.query(
+    `
+      SELECT
+        hb.*,
+        (
+          SELECT ap.photo_url
+          FROM accommodation_photos ap
+          WHERE ap.branch_id = hb.id
+            AND ap.is_primary = TRUE
+          ORDER BY ap.display_order ASC, ap.id ASC
+          LIMIT 1
+        ) AS image_url
+      FROM hotel_branches hb
+      WHERE hb.id = $1
+    `,
+    [branchId],
+  );
+
+  return result.rows[0];
+}
 
 // GET /api/admin/branches
 // View all branches, including inactive branches.
@@ -19,24 +167,32 @@ router.get(
       const result = await pool.query(
         `
           SELECT
-            id,
-            name,
-            slug,
-            description,
-            address_line,
-            suburb,
-            city,
-            province,
-            country,
-            postal_code,
-            latitude,
-            longitude,
-            star_rating,
-            is_active,
-            created_at,
-            updated_at
-          FROM hotel_branches
-          ORDER BY city ASC, name ASC
+            hb.id,
+            hb.name,
+            hb.slug,
+            hb.description,
+            hb.address_line,
+            hb.suburb,
+            hb.city,
+            hb.province,
+            hb.country,
+            hb.postal_code,
+            hb.latitude,
+            hb.longitude,
+            hb.star_rating,
+            hb.is_active,
+            hb.created_at,
+            hb.updated_at,
+            (
+              SELECT ap.photo_url
+              FROM accommodation_photos ap
+              WHERE ap.branch_id = hb.id
+                AND ap.is_primary = TRUE
+              ORDER BY ap.display_order ASC, ap.id ASC
+              LIMIT 1
+            ) AS image_url
+          FROM hotel_branches hb
+          ORDER BY hb.city ASC, hb.name ASC
         `,
       );
 
@@ -57,11 +213,12 @@ router.get(
 );
 
 // POST /api/admin/branches
-// Create a hotel branch.
+// Create a hotel branch, optionally with an image.
 router.post(
   "/",
   authenticateAdmin,
   requirePermission("branches.create"),
+  uploadSingleImage,
   async (req: AuthenticatedAdminRequest, res) => {
     const {
       name,
@@ -73,10 +230,21 @@ router.post(
       province,
       country = "South Africa",
       postalCode,
-      latitude,
-      longitude,
-      starRating,
     } = req.body ?? {};
+
+    const latitude = parseOptionalNumber(req.body?.latitude);
+    const longitude = parseOptionalNumber(req.body?.longitude);
+    const starRating = parseOptionalNumber(req.body?.starRating);
+
+    const uploadedImage = req.file;
+
+    if (uploadedImage && !isSupportedImage(uploadedImage)) {
+      res.status(400).json({
+        success: false,
+        message: "Only valid JPEG, PNG and WebP images are allowed.",
+      });
+      return;
+    }
 
     if (
       typeof name !== "string" ||
@@ -115,24 +283,18 @@ router.post(
     }
 
     if (
+      Number.isNaN(latitude) ||
       (latitude !== undefined &&
         latitude !== null &&
-        (typeof latitude !== "number" ||
-          !Number.isFinite(latitude) ||
-          latitude < -90 ||
-          latitude > 90)) ||
+        (latitude < -90 || latitude > 90)) ||
+      Number.isNaN(longitude) ||
       (longitude !== undefined &&
         longitude !== null &&
-        (typeof longitude !== "number" ||
-          !Number.isFinite(longitude) ||
-          longitude < -180 ||
-          longitude > 180)) ||
+        (longitude < -180 || longitude > 180)) ||
+      Number.isNaN(starRating) ||
       (starRating !== undefined &&
         starRating !== null &&
-        (typeof starRating !== "number" ||
-          !Number.isFinite(starRating) ||
-          starRating < 0 ||
-          starRating > 5))
+        (starRating < 0 || starRating > 5))
     ) {
       res.status(400).json({
         success: false,
@@ -141,8 +303,13 @@ router.post(
       return;
     }
 
+    let client: PoolClient | undefined;
+
     try {
-      const result = await pool.query(
+      client = await pool.connect();
+      await client.query("BEGIN");
+
+      const result = await client.query(
         `
           INSERT INTO hotel_branches (
             name,
@@ -161,7 +328,7 @@ router.post(
           VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
           )
-          RETURNING *
+          RETURNING id
         `,
         [
           name.trim(),
@@ -179,18 +346,32 @@ router.post(
         ],
       );
 
+      const branchId = Number(result.rows[0].id);
+
+      if (uploadedImage) {
+        await savePrimaryBranchImage(
+          client,
+          branchId,
+          uploadedImage,
+          name.trim(),
+        );
+      }
+
+      const branch = await getBranchWithImage(client, branchId);
+
+      await client.query("COMMIT");
+
       res.status(201).json({
         success: true,
         message: "Hotel branch created successfully.",
-        data: result.rows[0],
+        data: branch,
       });
     } catch (error: unknown) {
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        error.code === "23505"
-      ) {
+      if (client) {
+        await client.query("ROLLBACK");
+      }
+
+      if (getErrorCode(error) === "23505") {
         res.status(409).json({
           success: false,
           message: "A branch with this unique value already exists.",
@@ -204,16 +385,19 @@ router.post(
         success: false,
         message: "Unable to create hotel branch.",
       });
+    } finally {
+      client?.release();
     }
   },
 );
 
 // PATCH /api/admin/branches/:id
-// Update branch details or activate/deactivate a branch.
+// Update branch details, replace its image, or activate/deactivate it.
 router.patch(
   "/:id",
   authenticateAdmin,
   requirePermission("branches.edit"),
+  uploadSingleImage,
   async (req: AuthenticatedAdminRequest, res) => {
     const branchId = Number(req.params.id);
 
@@ -221,6 +405,16 @@ router.patch(
       res.status(400).json({
         success: false,
         message: "A valid branch ID is required.",
+      });
+      return;
+    }
+
+    const uploadedImage = req.file;
+
+    if (uploadedImage && !isSupportedImage(uploadedImage)) {
+      res.status(400).json({
+        success: false,
+        message: "Only valid JPEG, PNG and WebP images are allowed.",
       });
       return;
     }
@@ -250,7 +444,7 @@ router.patch(
         continue;
       }
 
-      const value = body[key];
+      let value: unknown = body[key];
 
       if (
         ["name", "slug", "addressLine", "city", "country"].includes(key) &&
@@ -275,19 +469,23 @@ router.patch(
         return;
       }
 
-      if (
-        ["latitude", "longitude", "starRating"].includes(key) &&
-        value !== null &&
-        (typeof value !== "number" || !Number.isFinite(value))
-      ) {
-        res.status(400).json({
-          success: false,
-          message: `${key} must be a valid number or null.`,
-        });
-        return;
+      if (["latitude", "longitude", "starRating"].includes(key)) {
+        value = parseOptionalNumber(value);
+
+        if (value === undefined || Number.isNaN(value)) {
+          res.status(400).json({
+            success: false,
+            message: `${key} must be a valid number or null.`,
+          });
+          return;
+        }
       }
 
-      if (key === "latitude" && value !== null && (value < -90 || value > 90)) {
+      if (
+        key === "latitude" &&
+        value !== null &&
+        (Number(value) < -90 || Number(value) > 90)
+      ) {
         res.status(400).json({
           success: false,
           message: "Latitude must be between -90 and 90.",
@@ -298,7 +496,7 @@ router.patch(
       if (
         key === "longitude" &&
         value !== null &&
-        (value < -180 || value > 180)
+        (Number(value) < -180 || Number(value) > 180)
       ) {
         res.status(400).json({
           success: false,
@@ -307,7 +505,11 @@ router.patch(
         return;
       }
 
-      if (key === "starRating" && value !== null && (value < 0 || value > 5)) {
+      if (
+        key === "starRating" &&
+        value !== null &&
+        (Number(value) < 0 || Number(value) > 5)
+      ) {
         res.status(400).json({
           success: false,
           message: "Star rating must be between 0 and 5.",
@@ -315,12 +517,20 @@ router.patch(
         return;
       }
 
-      if (key === "isActive" && typeof value !== "boolean") {
-        res.status(400).json({
-          success: false,
-          message: "isActive must be true or false.",
-        });
-        return;
+      if (key === "isActive") {
+        if (value === "true") {
+          value = true;
+        } else if (value === "false") {
+          value = false;
+        }
+
+        if (typeof value !== "boolean") {
+          res.status(400).json({
+            success: false,
+            message: "isActive must be true or false.",
+          });
+          return;
+        }
       }
 
       let normalizedValue = value;
@@ -335,47 +545,88 @@ router.patch(
       updates.push(`${column} = $${values.length}`);
     }
 
-    if (updates.length === 0) {
+    if (updates.length === 0 && !uploadedImage) {
       res.status(400).json({
         success: false,
-        message: "Provide at least one valid field to update.",
+        message: "Provide at least one field or an image to update.",
       });
       return;
     }
 
-    values.push(branchId);
+    let client: PoolClient | undefined;
 
     try {
-      const result = await pool.query(
-        `
-          UPDATE hotel_branches
-          SET ${updates.join(", ")}, updated_at = NOW()
-          WHERE id = $${values.length}
-          RETURNING *
-        `,
-        values,
-      );
+      client = await pool.connect();
+      await client.query("BEGIN");
 
-      if (result.rows.length === 0) {
-        res.status(404).json({
-          success: false,
-          message: "Hotel branch not found.",
-        });
-        return;
+      if (updates.length > 0) {
+        values.push(branchId);
+
+        const result = await client.query(
+          `
+            UPDATE hotel_branches
+            SET ${updates.join(", ")}, updated_at = NOW()
+            WHERE id = $${values.length}
+            RETURNING id
+          `,
+          values,
+        );
+
+        if (result.rows.length === 0) {
+          await client.query("ROLLBACK");
+
+          res.status(404).json({
+            success: false,
+            message: "Hotel branch not found.",
+          });
+          return;
+        }
+      } else {
+        const branchExists = await client.query(
+          "SELECT id FROM hotel_branches WHERE id = $1",
+          [branchId],
+        );
+
+        if (branchExists.rows.length === 0) {
+          await client.query("ROLLBACK");
+
+          res.status(404).json({
+            success: false,
+            message: "Hotel branch not found.",
+          });
+          return;
+        }
       }
+
+      if (uploadedImage) {
+        const branchName = await client.query(
+          "SELECT name FROM hotel_branches WHERE id = $1",
+          [branchId],
+        );
+
+        await savePrimaryBranchImage(
+          client,
+          branchId,
+          uploadedImage,
+          branchName.rows[0].name,
+        );
+      }
+
+      const branch = await getBranchWithImage(client, branchId);
+
+      await client.query("COMMIT");
 
       res.status(200).json({
         success: true,
         message: "Hotel branch updated successfully.",
-        data: result.rows[0],
+        data: branch,
       });
     } catch (error: unknown) {
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        error.code === "23505"
-      ) {
+      if (client) {
+        await client.query("ROLLBACK");
+      }
+
+      if (getErrorCode(error) === "23505") {
         res.status(409).json({
           success: false,
           message: "A branch with this unique value already exists.",
@@ -389,6 +640,8 @@ router.patch(
         success: false,
         message: "Unable to update hotel branch.",
       });
+    } finally {
+      client?.release();
     }
   },
 );
