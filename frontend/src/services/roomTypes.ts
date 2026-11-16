@@ -11,6 +11,7 @@ export type RoomType = {
   currency: string;
   facilities: string[] | null;
   policies: Record<string, unknown> | null;
+  image_url?: string | null;
 };
 
 type RoomTypesResponse = {
