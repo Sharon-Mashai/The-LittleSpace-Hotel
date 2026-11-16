@@ -78,8 +78,9 @@ The application's design process and documentation are available in Figma.
 ## Administrator Access
 
 Administrators can access the administration area using:
-Email Address : mashaisharon5@gmail.com
-Password : flowersAdmin
+
+Email Address : mashaisharon6@gmail.com
+Password : sharonAdmin
 
 
 ## Technologies Used
