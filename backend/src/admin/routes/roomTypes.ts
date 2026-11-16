@@ -1,5 +1,10 @@
 import { Router } from "express";
 import { pool } from "../../config/db.js";
+import type { PoolClient } from "pg";
+import {
+  uploadSingleImage,
+  isSupportedImage,
+} from "../../middleware/imageUpload.js";
 import {
   authenticateAdmin,
   requirePermission,
@@ -7,6 +12,127 @@ import {
 } from "../middleware/auth.js";
 
 const router = Router();
+
+type RoomTypeBody = Record<string, unknown>;
+
+function parseInteger(value: unknown): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    return Number(value);
+  }
+  return Number.NaN;
+}
+
+function parseFacilities(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function parseBoolean(value: unknown): boolean | null {
+  if (value === true || value === "true") return true;
+  if (value === false || value === "false") return false;
+  return null;
+}
+
+async function savePrimaryRoomTypeImage(
+  client: PoolClient,
+  roomTypeId: number,
+  file: Express.Multer.File,
+): Promise<void> {
+  const existingPhoto = await client.query(
+    `
+      SELECT id
+      FROM room_type_photos
+      WHERE room_type_id = $1
+        AND is_primary = TRUE
+      ORDER BY id ASC
+      LIMIT 1
+      FOR UPDATE
+    `,
+    [roomTypeId],
+  );
+
+  if (existingPhoto.rows.length > 0) {
+    await client.query(
+      `
+        UPDATE room_type_photos
+        SET
+          image_data = $1,
+          mime_type = $2,
+          file_size = $3,
+          photo_url = $4
+        WHERE id = $5
+      `,
+      [
+        file.buffer,
+        file.mimetype,
+        file.size,
+        `/api/room-types/photos/${existingPhoto.rows[0].id}/image`,
+        existingPhoto.rows[0].id,
+      ],
+    );
+
+    return;
+  }
+
+  const insertedPhoto = await client.query(
+    `
+      INSERT INTO room_type_photos (
+        room_type_id,
+        photo_url,
+        image_data,
+        mime_type,
+        file_size,
+        is_primary,
+        display_order
+      )
+      VALUES ($1, $2, $3, $4, $5, TRUE, 0)
+      RETURNING id
+    `,
+    [
+      roomTypeId,
+      "/api/room-types/photos/pending/image",
+      file.buffer,
+      file.mimetype,
+      file.size,
+    ],
+  );
+
+  const photoId = insertedPhoto.rows[0].id;
+
+  await client.query(
+    `
+      UPDATE room_type_photos
+      SET photo_url = $1
+      WHERE id = $2
+    `,
+    [`/api/room-types/photos/${photoId}/image`, photoId],
+  );
+}
+
+async function getRoomTypeImageUrl(
+  client: PoolClient,
+  roomTypeId: number,
+): Promise<string | null> {
+  const result = await client.query(
+    `
+      SELECT photo_url
+      FROM room_type_photos
+      WHERE room_type_id = $1
+        AND is_primary = TRUE
+      ORDER BY id ASC
+      LIMIT 1
+    `,
+    [roomTypeId],
+  );
+
+  return result.rows[0]?.photo_url ?? null;
+}
 
 // GET /api/admin/room-types
 // View all room types, including inactive room types.
@@ -32,7 +158,15 @@ router.get(
           rt.policies,
           rt.is_active,
           rt.created_at,
-          rt.updated_at
+          rt.updated_at,
+          (
+            SELECT rtp.photo_url
+            FROM room_type_photos AS rtp
+            WHERE rtp.room_type_id = rt.id
+              AND rtp.is_primary = TRUE
+            ORDER BY rtp.id ASC
+            LIMIT 1
+          ) AS image_url
         FROM room_types AS rt
         INNER JOIN hotel_branches AS hb
           ON hb.id = rt.branch_id
@@ -56,23 +190,25 @@ router.get(
 );
 
 // POST /api/admin/room-types
-// Create a room type for an existing accommodation.
+// Create a room type and optionally save its primary image.
 router.post(
   "/",
   authenticateAdmin,
   requirePermission("room_types.create"),
+  uploadSingleImage,
   async (req: AuthenticatedAdminRequest, res) => {
-    const {
-      branchId,
-      name,
-      description,
-      capacityAdults,
-      capacityChildren = 0,
-      basePrice,
-      currency = "ZAR",
-      facilities = [],
-      policies,
-    } = req.body ?? {};
+    const body = (req.body ?? {}) as RoomTypeBody;
+
+    const branchId = parseInteger(body.branchId);
+    const capacityAdults = parseInteger(body.capacityAdults);
+    const capacityChildren =
+      body.capacityChildren === undefined
+        ? 0
+        : parseInteger(body.capacityChildren);
+    const basePrice = parseInteger(body.basePrice);
+    const facilities = body.facilities ?? [];
+
+    const { name, description, currency = "ZAR", policies } = body;
 
     if (
       !Number.isSafeInteger(branchId) ||
@@ -83,7 +219,6 @@ router.post(
       capacityAdults <= 0 ||
       !Number.isSafeInteger(capacityChildren) ||
       capacityChildren < 0 ||
-      typeof basePrice !== "number" ||
       !Number.isFinite(basePrice) ||
       basePrice < 0 ||
       typeof currency !== "string" ||
@@ -121,33 +256,41 @@ router.post(
       return;
     }
 
-    if (!Array.isArray(facilities)) {
-      res.status(400).json({
-        success: false,
-        message: "Facilities must be an array.",
-      });
-      return;
-    }
+    const parsedFacilities = parseFacilities(facilities);
 
     if (
-      facilities.some(
+      !Array.isArray(parsedFacilities) ||
+      parsedFacilities.some(
         (facility: unknown) => typeof facility !== "string" || !facility.trim(),
       )
     ) {
       res.status(400).json({
         success: false,
-        message: "Each facility must be a non-empty string.",
+        message: "Facilities must be an array of non-empty strings.",
       });
       return;
     }
 
+    if (req.file && !isSupportedImage(req.file)) {
+      res.status(400).json({
+        success: false,
+        message: "Please upload a valid JPEG, PNG or WebP image.",
+      });
+      return;
+    }
+
+    const client = await pool.connect();
+
     try {
-      const branchResult = await pool.query(
+      await client.query("BEGIN");
+
+      const branchResult = await client.query(
         `SELECT id FROM hotel_branches WHERE id = $1`,
         [branchId],
       );
 
       if (branchResult.rows.length === 0) {
+        await client.query("ROLLBACK");
         res.status(404).json({
           success: false,
           message: "Hotel branch not found.",
@@ -155,7 +298,7 @@ router.post(
         return;
       }
 
-      const result = await pool.query(
+      const result = await client.query(
         `
           INSERT INTO room_types (
             branch_id,
@@ -179,33 +322,52 @@ router.post(
           capacityChildren,
           basePrice,
           currency,
-          JSON.stringify(facilities.map((facility: string) => facility.trim())),
+          JSON.stringify(
+            parsedFacilities.map((facility: string) => facility.trim()),
+          ),
           typeof policies === "string" ? policies.trim() || null : null,
         ],
       );
 
+      const roomType = result.rows[0];
+
+      if (req.file) {
+        await savePrimaryRoomTypeImage(client, roomType.id, req.file);
+      }
+
+      const imageUrl = await getRoomTypeImageUrl(client, roomType.id);
+
+      await client.query("COMMIT");
+
       res.status(201).json({
         success: true,
         message: "Room type created successfully.",
-        data: result.rows[0],
+        data: {
+          ...roomType,
+          image_url: imageUrl,
+        },
       });
     } catch (error) {
+      await client.query("ROLLBACK");
       console.error("Failed to create room type:", error);
 
       res.status(500).json({
         success: false,
         message: "Unable to create room type.",
       });
+    } finally {
+      client.release();
     }
   },
 );
 
 // PATCH /api/admin/room-types/:id
-// Update room-type details or activate/deactivate a room type.
+// Update room-type details, its primary image, or its active status.
 router.patch(
   "/:id",
   authenticateAdmin,
   requirePermission("room_types.edit"),
+  uploadSingleImage,
   async (req: AuthenticatedAdminRequest, res) => {
     const roomTypeId = Number(req.params.id);
 
@@ -217,7 +379,15 @@ router.patch(
       return;
     }
 
-    const body = req.body ?? {};
+    if (req.file && !isSupportedImage(req.file)) {
+      res.status(400).json({
+        success: false,
+        message: "Please upload a valid JPEG, PNG or WebP image.",
+      });
+      return;
+    }
+
+    const body = (req.body ?? {}) as RoomTypeBody;
 
     const fields: Record<string, string> = {
       branchId: "branch_id",
@@ -240,26 +410,15 @@ router.patch(
         continue;
       }
 
-      const value = body[key];
+      let value = body[key];
 
       if (key === "branchId") {
-        if (!Number.isSafeInteger(value) || value <= 0) {
+        value = parseInteger(value);
+
+        if (!Number.isSafeInteger(value) || Number(value) <= 0) {
           res.status(400).json({
             success: false,
             message: "branchId must be a positive integer.",
-          });
-          return;
-        }
-
-        const branchResult = await pool.query(
-          `SELECT id FROM hotel_branches WHERE id = $1`,
-          [value],
-        );
-
-        if (branchResult.rows.length === 0) {
-          res.status(404).json({
-            success: false,
-            message: "Hotel branch not found.",
           });
           return;
         }
@@ -285,27 +444,31 @@ router.patch(
         return;
       }
 
-      if (
-        ["capacityAdults", "capacityChildren"].includes(key) &&
-        (!Number.isSafeInteger(value) ||
-          (key === "capacityAdults" ? value <= 0 : value < 0))
-      ) {
-        res.status(400).json({
-          success: false,
-          message: `${key} has an invalid value.`,
-        });
-        return;
+      if (["capacityAdults", "capacityChildren"].includes(key)) {
+        value = parseInteger(value);
+
+        if (
+          !Number.isSafeInteger(value) ||
+          (key === "capacityAdults" ? Number(value) <= 0 : Number(value) < 0)
+        ) {
+          res.status(400).json({
+            success: false,
+            message: `${key} has an invalid value.`,
+          });
+          return;
+        }
       }
 
-      if (
-        key === "basePrice" &&
-        (typeof value !== "number" || !Number.isFinite(value) || value < 0)
-      ) {
-        res.status(400).json({
-          success: false,
-          message: "basePrice must be a non-negative number.",
-        });
-        return;
+      if (key === "basePrice") {
+        value = parseInteger(value);
+
+        if (!Number.isFinite(value) || Number(value) < 0) {
+          res.status(400).json({
+            success: false,
+            message: "basePrice must be a non-negative number.",
+          });
+          return;
+        }
       }
 
       if (
@@ -319,45 +482,50 @@ router.patch(
         return;
       }
 
-      if (
-        key === "facilities" &&
-        (!Array.isArray(value) ||
+      if (key === "facilities") {
+        value = parseFacilities(value);
+
+        if (
+          !Array.isArray(value) ||
           value.some(
             (facility: unknown) =>
               typeof facility !== "string" || !facility.trim(),
-          ))
-      ) {
-        res.status(400).json({
-          success: false,
-          message: "Facilities must be an array of non-empty strings.",
-        });
-        return;
-      }
+          )
+        ) {
+          res.status(400).json({
+            success: false,
+            message: "Facilities must be an array of non-empty strings.",
+          });
+          return;
+        }
 
-      if (key === "isActive" && typeof value !== "boolean") {
-        res.status(400).json({
-          success: false,
-          message: "isActive must be true or false.",
-        });
-        return;
-      }
-
-      let normalizedValue: unknown = value;
-
-      if (key === "name" && typeof value === "string") {
-        normalizedValue = value.trim();
-      } else if (
-        ["description", "policies"].includes(key) &&
-        typeof value === "string"
-      ) {
-        normalizedValue = value.trim() || null;
-      } else if (key === "facilities") {
-        normalizedValue = JSON.stringify(
+        value = JSON.stringify(
           value.map((facility: string) => facility.trim()),
         );
       }
 
-      values.push(normalizedValue);
+      if (key === "isActive") {
+        value = parseBoolean(value);
+
+        if (value === null) {
+          res.status(400).json({
+            success: false,
+            message: "isActive must be true or false.",
+          });
+          return;
+        }
+      }
+
+      if (key === "name" && typeof value === "string") {
+        value = value.trim();
+      } else if (
+        ["description", "policies"].includes(key) &&
+        typeof value === "string"
+      ) {
+        value = value.trim() || null;
+      }
+
+      values.push(value);
 
       updates.push(
         key === "facilities"
@@ -366,28 +534,58 @@ router.patch(
       );
     }
 
-    if (updates.length === 0) {
+    if (updates.length === 0 && !req.file) {
       res.status(400).json({
         success: false,
-        message: "Provide at least one valid field to update.",
+        message: "Provide at least one field or image to update.",
       });
       return;
     }
 
-    values.push(roomTypeId);
+    const client = await pool.connect();
 
     try {
-      const result = await pool.query(
-        `
-          UPDATE room_types
-          SET ${updates.join(", ")}, updated_at = NOW()
-          WHERE id = $${values.length}
-          RETURNING *
-        `,
-        values,
-      );
+      await client.query("BEGIN");
 
-      if (result.rows.length === 0) {
+      if (Object.prototype.hasOwnProperty.call(body, "branchId")) {
+        const branchResult = await client.query(
+          `SELECT id FROM hotel_branches WHERE id = $1`,
+          [Number(body.branchId)],
+        );
+
+        if (branchResult.rows.length === 0) {
+          await client.query("ROLLBACK");
+          res.status(404).json({
+            success: false,
+            message: "Hotel branch not found.",
+          });
+          return;
+        }
+      }
+
+      let roomTypeResult;
+
+      if (updates.length > 0) {
+        values.push(roomTypeId);
+
+        roomTypeResult = await client.query(
+          `
+            UPDATE room_types
+            SET ${updates.join(", ")}, updated_at = NOW()
+            WHERE id = $${values.length}
+            RETURNING *
+          `,
+          values,
+        );
+      } else {
+        roomTypeResult = await client.query(
+          `SELECT * FROM room_types WHERE id = $1`,
+          [roomTypeId],
+        );
+      }
+
+      if (roomTypeResult.rows.length === 0) {
+        await client.query("ROLLBACK");
         res.status(404).json({
           success: false,
           message: "Room type not found.",
@@ -395,18 +593,32 @@ router.patch(
         return;
       }
 
+      if (req.file) {
+        await savePrimaryRoomTypeImage(client, roomTypeId, req.file);
+      }
+
+      const imageUrl = await getRoomTypeImageUrl(client, roomTypeId);
+
+      await client.query("COMMIT");
+
       res.status(200).json({
         success: true,
         message: "Room type updated successfully.",
-        data: result.rows[0],
+        data: {
+          ...roomTypeResult.rows[0],
+          image_url: imageUrl,
+        },
       });
     } catch (error) {
+      await client.query("ROLLBACK");
       console.error("Failed to update room type:", error);
 
       res.status(500).json({
         success: false,
         message: "Unable to update room type.",
       });
+    } finally {
+      client.release();
     }
   },
 );
